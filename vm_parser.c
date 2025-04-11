@@ -124,7 +124,6 @@ void print_parser_contents(VM_Parser *parser)
 {
 	while(vm_has_next(parser))
 	{
-		printf("%s\n",parser->code+parser->cursor);
 		parser->cursor+=strlen(parser->code+parser->cursor)+1;
 	}
 }

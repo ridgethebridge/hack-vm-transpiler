@@ -8,6 +8,19 @@
 	free(parser->code);\
 	free(parser->file_name;\
 	free(parser);
+
+#define STATIC_BASE 16
+#define STACK_BASE SP
+#define LOCAL_BASE LCL
+#define ARG_BASE ARG
+#define THIS_BASE THIS
+#define THAT_BASE THAT
+#define TEMP_BASE 5
+#define GEN_1 13
+#define GEN_2 14
+#define GEN_3 15
+#define XSTR(X) STR(X)
+#define STR(X) #X
 typedef unsigned long long uint64;
 typedef unsigned short uint16;
 typedef struct VM_Parser {
@@ -29,8 +42,13 @@ typedef enum VM_Instruction {
 
 typedef enum VM_Segment {
 	VM_STATIC,
-	VM_CONSTANT,
 	VM_LOCAL,
+	VM_ARGUMENT,
+	VM_THIS,
+	VM_THAT,
+	VM_POINTER,
+	VM_TEMP,
+	VM_CONSTANT,
 	VM_INVALID_SEGMENT
 }VM_Segment;
 VM_Parser* vm_create_parser(char *file);
