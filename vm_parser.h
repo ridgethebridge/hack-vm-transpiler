@@ -25,7 +25,7 @@ typedef unsigned long long uint64;
 typedef unsigned short uint16;
 typedef struct VM_Parser {
 	String_Snap code;
-	String_Snap cur_line;
+	Snap_Scanner line_scanner;
 	 char *file_name;
 	uint64 cursor;
 	uint64 line_num;
@@ -51,9 +51,9 @@ typedef enum VM_Segment {
 }VM_Segment;
 VM_Parser* vm_create_parser(char *file);
 
-VM_Instruction vm_instruction_type(char *ins);
+VM_Instruction vm_instruction_type(String_Snap ins);
 
-VM_Segment vm_segment_type(char *segment);
+VM_Segment vm_segment_type(String_Snap segment);
 
 String_Snap vm_get_word(VM_Parser *parser);
 

@@ -23,12 +23,12 @@ int main(int argc, char **argv)
 	while(vm_has_next(parser))
 	{
 		vm_read_line(parser);
-		char *command = vm_get_word(parser);
+	 	String_Snap command = vm_get_word(parser);
 		VM_Instruction ins = vm_instruction_type(command);
 		if(ins == VM_PUSH)
 		{
-			char *segment = vm_get_word(parser);
-			char *index = vm_get_word(parser);
+			String_Snap segment = vm_get_word(parser);
+			String_Snap index = vm_get_word(parser);
 			vm_write_push(writer,segment,index);
 		}
 		else if(ins == VM_ARITHMETIC)
@@ -37,11 +37,12 @@ int main(int argc, char **argv)
 		}
 		else if(ins == VM_POP)
 		{
-			char *segment = vm_get_word(parser);
-			char *index = vm_get_word(parser);
+		 	String_Snap segment = vm_get_word(parser);
+			String_Snap index = vm_get_word(parser);
 			vm_write_pop(writer,segment,index);
 		}
 	}
-	vm_free_parser(parser);
-	vm_free_writer(writer);
+//	vm_free_parser(parser);
+//	vm_free_writer(writer);
+return 0;
 }

@@ -2,24 +2,31 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include"vm_parser.h"
-#include"../string-snap/string_snap.h"
-//
 
-VM_Instruction vm_instruction_type(char *ins)
+VM_Instruction vm_instruction_type(String_Snap ins)
 {
-	if(strcmp(ins,"push") == 0)
+	if(ss_are_equal(ins,SS("push")))
 		return VM_PUSH;
-	if(strcmp(ins,"pop") == 0)
+	if(ss_are_equal(ins,SS("pop")) )
 		return VM_POP;
-	if(strcmp(ins,"add") == 0)
+	if(ss_are_equal(ins,SS("add")) )
 		return VM_ARITHMETIC;
-	if(strcmp(ins,"sub") == 0)
+	if(ss_are_equal(ins,SS("sub")) )
 		return VM_ARITHMETIC;
-	if(strcmp(ins,"neg") == 0)
+	if(ss_are_equal(ins,SS("neg")) )
 		return VM_ARITHMETIC;
-	if(strcmp(ins,"eq") ==0)
+	if(ss_are_equal(ins,SS("eq")) )
 		return VM_ARITHMETIC;
-
+	if(ss_are_equal(ins,SS("gt")))
+		return VM_PUSH;
+	if(ss_are_equal(ins,SS("lt")) )
+		return VM_POP;
+	if(ss_are_equal(ins,SS("and")) )
+		return VM_ARITHMETIC;
+	if(ss_are_equal(ins,SS("or")) )
+		return VM_ARITHMETIC;
+	if(ss_are_equal(ins,SS("not")) )
+		return VM_ARITHMETIC;
 	return VM_INVALID_INSTRUCTION;
 }
 
@@ -46,7 +53,7 @@ VM_Parser* vm_create_parser(char *file_name)
 		code = realloc(code,size);
 	}
 	strcpy(code+pos,line_buf);
-	pos+=line_length+1;
+	pos+=line_length;
 	}
 	code = realloc(code,pos);
 	parser->code = ss_from_cstr(code);
@@ -63,7 +70,7 @@ bool vm_has_next(VM_Parser * parser)
 
  String_Snap vm_get_word(VM_Parser *parser)
 {
-	return ss_next_word(&(parser->cur_line));
+	return ss_next_word(&(parser->line_scanner));
 }
 
 void vm_skip_blanks(VM_Parser *parser)
@@ -103,25 +110,21 @@ void vm_skip_blanks(VM_Parser *parser)
 String_Snap vm_read_line(VM_Parser *parser)
 {
 	vm_skip_blanks(parser);
-	parser->cur_line = ss_get_line(parser->code.data + parser->cursor);
-	return parser->cur_line;
+	String_Snap line = ss_delim_cstr(parser->code.data+parser->cursor,'\n');
+	parser->cursor+=line.length+1;
+	line = ss_trim(line);
+	parser->line_scanner = ss_create_scanner(line);
+	return parser->line_scanner.snap;
 }
 
-VM_Segment vm_segment_type(char *segment)
+VM_Segment vm_segment_type(String_Snap segment)
 {
-	if(strcmp(segment,"constant") == 0)
+	if(ss_are_equal(segment,SS("constant")))
 		return VM_CONSTANT;
-	if(strcmp(segment,"static") == 0)
+	if(ss_are_equal(segment,SS("static")))
 		return VM_STATIC;
-	if(strcmp(segment,"local") == 0)
+	if(ss_are_equal(segment,SS("local")))
 		return VM_LOCAL;
 	return VM_INVALID_SEGMENT;
 }
 
-int main()
-{
-	VM_Parser *parser = vm_create_parser("paragraph.txt");
-	vm_read_line(parser);
-	ss_print_snap(parser->cur_line);
-	return 0;
-}

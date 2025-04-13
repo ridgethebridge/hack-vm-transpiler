@@ -2,7 +2,7 @@
 CC=gcc
 FLAGS=-Wall -o VMtranslator
 C_FLAGS =-Wall -c
-OBJECTS= vm_translator.o vm_parser.o vm_writer.o
+OBJECTS= vm_translator.o vm_parser.o vm_writer.o string_snap.o
 
 VMtranslator.exe: $(OBJECTS)
 	$(CC) $(OBJECTS) $(FLAGS) 

@@ -1,7 +1,6 @@
 
 #include"vm_parser.h"
 #include"vm_writer.h"
-#include<string.h>
 #include<stdlib.h>
 
 VM_Writer *vm_create_writer(char *file)
@@ -27,12 +26,12 @@ void vm_free_writer(VM_Writer *writer)
 	free(writer);
 }
 
-void vm_write_push(VM_Writer *writer, char *segment, char* index)
+void vm_write_push(VM_Writer *writer, String_Snap segment, String_Snap index)
 {
 	
-	if(strcmp(segment,"constant") == 0) 
+	if(ss_are_equal(segment,SS("constant"))) 
 	{
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"A=M\n");
@@ -40,23 +39,23 @@ void vm_write_push(VM_Writer *writer, char *segment, char* index)
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M+1\n");
 	}
-	else if(strcmp(segment,"static") == 0)
+	else if(ss_are_equal(segment,SS("static")) )
 	{
 		
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@16\n");
 		fprintf(writer->output,"A=D+A\n");
 		fprintf(writer->output,"D=M\n");
-		fprintf(writer->output,"@SP\n"); fprintf(writer->output,"A=M\n");
+		fprintf(writer->output,"@SP\n"); 
 		fprintf(writer->output,"M=D\n");
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M+1\n");
 	}
 
-	else if(strcmp(segment,"pointer"))
+	else if(ss_are_equal(segment,SS("pointer")))
 	{
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(THIS_BASE));
 		fprintf(writer->output,"A=D+A\n");
@@ -67,9 +66,9 @@ void vm_write_push(VM_Writer *writer, char *segment, char* index)
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M+1\n");
 	}
-	else if(strcmp(segment,"argument"))
+	else if(ss_are_equal(segment,SS("argument")))
 	{
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@ARG\n");
 		fprintf(writer->output,"A=D+A\n");
@@ -80,9 +79,9 @@ void vm_write_push(VM_Writer *writer, char *segment, char* index)
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M+1\n");
 	}
-	else if(strcmp(segment,"local"))
+	else if(ss_are_equal(segment,SS("local")))
 	{
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@LCL\n");
 		fprintf(writer->output,"A=D+A\n");
@@ -93,9 +92,9 @@ void vm_write_push(VM_Writer *writer, char *segment, char* index)
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M+1\n");
 	}
-	else if(strcmp(segment,"this"))
+	else if(ss_are_equal(segment,SS("this")))
 	{
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(THIS_BASE));
 		fprintf(writer->output,"A=M\n");
@@ -107,9 +106,9 @@ void vm_write_push(VM_Writer *writer, char *segment, char* index)
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M+1\n");
 	}
-	else if(strcmp(segment,"that"))
+	else if(ss_are_equal(segment,SS("that")))
 	{
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(THAT_BASE));
 		fprintf(writer->output,"A=M\n");
@@ -124,9 +123,9 @@ void vm_write_push(VM_Writer *writer, char *segment, char* index)
 	
 }
 
-void vm_write_arithmetic(VM_Writer *writer,char *command)
+void vm_write_arithmetic(VM_Writer *writer,String_Snap command)
 {
-	if(strcmp(command,"add") == 0)
+	if(ss_are_equal(command,SS("add")))
 	{
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M-1\n");
@@ -135,7 +134,7 @@ void vm_write_arithmetic(VM_Writer *writer,char *command)
 		fprintf(writer->output,"A=A-1\n");
 		fprintf(writer->output,"M=D+M\n");
 	}
-	else if(strcmp(command,"sub") == 0)
+	else if(ss_are_equal(command,SS("sub")))
 	{
 		fprintf(writer->output,"@SP\n");
 		fprintf(writer->output,"M=M-1\n");
@@ -146,12 +145,12 @@ void vm_write_arithmetic(VM_Writer *writer,char *command)
 	}
 }
 
-void vm_write_pop(VM_Writer *writer,char *segment, char *index)
+void vm_write_pop(VM_Writer *writer,String_Snap segment, String_Snap index)
 {
-	 if(strcmp(segment,"static") == 0)
+	 if(ss_are_equal(segment,SS("static")))
 	{
 		
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(STATIC_BASE));
 		fprintf(writer->output,"A=D+A\n");
@@ -167,10 +166,10 @@ void vm_write_pop(VM_Writer *writer,char *segment, char *index)
 		fprintf(writer->output,"M=D\n"); // address of static region to pop to
 	}
 
-	 else if(strcmp(segment,"local") == 0)
+	 else if(ss_are_equal(segment,SS("local")))
 	{
 		
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(LOCAL_BASE));
 		fprintf(writer->output,"A=M\n");
@@ -186,10 +185,10 @@ void vm_write_pop(VM_Writer *writer,char *segment, char *index)
 		fprintf(writer->output,"A=M\n"); 
 		fprintf(writer->output,"M=D\n"); 
 	}
-	 else if(strcmp(segment,"argument") == 0)
+	 else if(ss_are_equal(segment,SS("argument")))
 	{
 		
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(ARG_BASE));
 		fprintf(writer->output,"A=M\n");
@@ -205,10 +204,10 @@ void vm_write_pop(VM_Writer *writer,char *segment, char *index)
 		fprintf(writer->output,"A=M\n"); 
 		fprintf(writer->output,"M=D\n"); 
 	}
-	 else if(strcmp(segment,"this") == 0)
+	 else if(ss_are_equal(segment,SS("this")))
 	{
 		
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(THIS_BASE));
 		fprintf(writer->output,"A=M\n");
@@ -224,9 +223,9 @@ void vm_write_pop(VM_Writer *writer,char *segment, char *index)
 		fprintf(writer->output,"A=M\n"); 
 		fprintf(writer->output,"M=D\n"); 
 	}
-	 else if(strcmp(segment,"that") == 0)
+	 else if(ss_are_equal(segment,SS("that")))
 	{
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(THAT_BASE));
 		fprintf(writer->output,"A=M\n");
@@ -242,10 +241,10 @@ void vm_write_pop(VM_Writer *writer,char *segment, char *index)
 		fprintf(writer->output,"A=M\n"); 
 		fprintf(writer->output,"M=D\n"); 
 	}
-	 else if(strcmp(segment,"pointer") == 0)
+	 else if(ss_are_equal(segment,SS("pointer")))
 	{
 		
-		fprintf(writer->output,"@%s\n",index);
+		fprintf(writer->output,"@%.*s\n",index.length,index.data);
 		fprintf(writer->output,"D=A\n");
 		fprintf(writer->output,"@%s\n",XSTR(THIS_BASE));
 		fprintf(writer->output,"A=D+A\n");

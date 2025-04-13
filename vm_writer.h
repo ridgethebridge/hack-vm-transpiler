@@ -9,9 +9,9 @@ typedef struct VM_Writer {
 } VM_Writer;
 
 
-void vm_write_push(VM_Writer *writer, char *segment, char *index);
-void vm_write_pop(VM_Writer *writer, char *segment, char *index);
-void vm_write_arithmetic(VM_Writer *writer, char *command);
+void vm_write_push(VM_Writer *writer, String_Snap segment, String_Snap index);
+void vm_write_pop(VM_Writer *writer, String_Snap segment, String_Snap index);
+void vm_write_arithmetic(VM_Writer *writer, String_Snap command);
 VM_Writer *vm_create_writer(char *file);
 void vm_free_writer(VM_Writer *writer);
 
