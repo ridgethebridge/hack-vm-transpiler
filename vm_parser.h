@@ -2,7 +2,7 @@
 #ifndef _VM_PARER_H_
 #define _VM_PARSER_H_
 #include<stdbool.h>
-#include"../string-snap/string_snap.h"
+#include"libs/string_snap.h"
 
 // for freeing parser object
 #define VM_FREE_PARSER(parser)\
@@ -32,14 +32,14 @@ typedef struct VM_Parser {
 } VM_Parser;
 
 typedef enum VM_Instruction {
-	VM_PUSH,
+	VM_PUSH = 0,
 	VM_POP,
 	VM_ARITHMETIC,
 	VM_INVALID_INSTRUCTION
 } VM_Instruction;
 
 typedef enum VM_Segment {
-	VM_STATIC,
+	VM_STATIC = 0,
 	VM_LOCAL,
 	VM_ARGUMENT,
 	VM_THIS,
@@ -49,6 +49,20 @@ typedef enum VM_Segment {
 	VM_CONSTANT,
 	VM_INVALID_SEGMENT
 }VM_Segment;
+
+typedef enum VM_Op{
+	VM_ADD= 0,
+	VM_SUB,
+	VM_EQ,
+	VM_GT,
+	VM_LT,
+	VM_AND,
+	VM_OR,
+	VM_NOT,
+	VM_NEG,
+	VM_INVALID_OP
+} VM_Op;
+
 VM_Parser* vm_create_parser(char *file);
 
 VM_Instruction vm_instruction_type(String_Snap ins);
@@ -65,5 +79,8 @@ void vm_skip_blanks(VM_Parser *parser);
 String_Snap vm_read_line(VM_Parser *parser);
 
 void vm_free_parser(VM_Parser *parser);
+bool vm_valid_index(String_Snap index);
+void vm_free_parser(VM_Parser *parser);
+VM_Op vm_op_type(String_Snap op);
 
 #endif

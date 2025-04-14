@@ -18,9 +18,9 @@ VM_Instruction vm_instruction_type(String_Snap ins)
 	if(ss_are_equal(ins,SS("eq")) )
 		return VM_ARITHMETIC;
 	if(ss_are_equal(ins,SS("gt")))
-		return VM_PUSH;
+		return VM_ARITHMETIC;
 	if(ss_are_equal(ins,SS("lt")) )
-		return VM_POP;
+		return VM_ARITHMETIC;
 	if(ss_are_equal(ins,SS("and")) )
 		return VM_ARITHMETIC;
 	if(ss_are_equal(ins,SS("or")) )
@@ -70,6 +70,11 @@ bool vm_has_next(VM_Parser * parser)
 
  String_Snap vm_get_word(VM_Parser *parser)
 {
+	if(!ss_has_next(parser->line_scanner))
+	{
+		fprintf(stderr,"end of line reached, unable to read more on line %lu in file %s\n",parser->line_num,parser->file_name);
+		exit(1);
+	}
 	return ss_next_word(&(parser->line_scanner));
 }
 
@@ -113,6 +118,7 @@ String_Snap vm_read_line(VM_Parser *parser)
 	String_Snap line = ss_delim_cstr(parser->code.data+parser->cursor,'\n');
 	parser->cursor+=line.length+1;
 	line = ss_trim(line);
+	line = ss_strdelim(line,SS("//"));
 	parser->line_scanner = ss_create_scanner(line);
 	return parser->line_scanner.snap;
 }
@@ -125,6 +131,58 @@ VM_Segment vm_segment_type(String_Snap segment)
 		return VM_STATIC;
 	if(ss_are_equal(segment,SS("local")))
 		return VM_LOCAL;
+	if(ss_are_equal(segment,SS("argument")))
+		return VM_ARGUMENT;
+	if(ss_are_equal(segment,SS("pointer")))
+		return VM_POINTER;
+	if(ss_are_equal(segment,SS("this")))
+		return VM_THIS;
+	if(ss_are_equal(segment,SS("that")))
+		return VM_THAT;
+	if(ss_are_equal(segment,SS("temp")))
+		return VM_TEMP;
 	return VM_INVALID_SEGMENT;
+}
+
+bool vm_valid_index(String_Snap index)
+{
+	uint64 i = 0;
+	while(i < index.length)
+	{
+		if(!ss_isdigit(index.data[i]))
+			return false;
+		++i;
+	}
+	return true;
+}
+
+void vm_free_parser(VM_Parser *parser)
+{
+	free(parser->code.data);
+	free(parser->file_name);
+	free(parser);
+}
+
+VM_Op vm_op_type(String_Snap op)
+{
+	if(ss_are_equal(op,SS("add")))
+		return VM_ADD;
+	if(ss_are_equal(op,SS("sub")))
+		return VM_SUB;
+	if(ss_are_equal(op,SS("and")))
+		return VM_AND;
+	if(ss_are_equal(op,SS("or")))
+		return VM_OR;
+	if(ss_are_equal(op,SS("eq")))
+		return VM_EQ;
+	if(ss_are_equal(op,SS("lt")))
+		return VM_LT;
+	if(ss_are_equal(op,SS("gt")))
+		return VM_GT;
+	if(ss_are_equal(op,SS("not")))
+		return VM_NOT;
+	if(ss_are_equal(op,SS("neg")))
+		return VM_NEG;
+	return VM_INVALID_OP;
 }
 

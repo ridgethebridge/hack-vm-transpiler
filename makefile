@@ -1,15 +1,22 @@
 
 CC=gcc
-FLAGS=-Wall -o VMtranslator
-C_FLAGS =-Wall -c
-OBJECTS= vm_translator.o vm_parser.o vm_writer.o string_snap.o
+BINARY=VMtranslator.exe
+CODEDIRS=. ./libs
+INCDIRS= . ./libs
+DEPFLAGS= -MP -MD
+CFILES=$(foreach D,$(CODEDIRS),$(wildcard $(D)/*.c))
+OBJECTS= $(patsubst %.c, %.o, $(CFILES))
+DEPFILES=$(patsubst %.c, %.d,$(CFILES))
+CFLAGS =-g $(foreach D, $(INCDIRS),-I$(D)) $(DEPFLAGS)
 
-VMtranslator.exe: $(OBJECTS)
-	$(CC) $(OBJECTS) $(FLAGS) 
+all:	$(BINARY)
+
+$(BINARY): $(OBJECTS)
+	$(CC) -o $@ $^ -g
 
 %.o: %.c
-	$(CC) $(C_FLAGS) $<
+	$(CC) -c $< $(CFLAGS) -o $@
 
 clean:
-	del *.o
+	rm $(OBJECTS) $(BINARY) $(DEPFILES)
 	
