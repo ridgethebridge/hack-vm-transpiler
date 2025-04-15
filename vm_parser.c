@@ -2,34 +2,31 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include"vm_parser.h"
-#include"../str-toolz/str_toolz.h"
-//
 
-VM_Instruction vm_instruction_type(char *ins)
+VM_Instruction vm_instruction_type(String_Snap ins)
 {
-	if(str_toolz_equal(ins,"push"))
+	if(ss_are_equal(ins,SS("push")))
 		return VM_PUSH;
-	if(str_toolz_equal(ins,"pop"))
+	if(ss_are_equal(ins,SS("pop")) )
 		return VM_POP;
-	if(str_toolz_equal(ins,"add"))
+	if(ss_are_equal(ins,SS("add")) )
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"sub"))
+	if(ss_are_equal(ins,SS("sub")) )
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"neg"))
+	if(ss_are_equal(ins,SS("neg")) )
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"eq") )
+	if(ss_are_equal(ins,SS("eq")) )
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"gt") )
+	if(ss_are_equal(ins,SS("gt")))
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"lt") )
+	if(ss_are_equal(ins,SS("lt")) )
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"and") )
+	if(ss_are_equal(ins,SS("and")) )
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"or") )
+	if(ss_are_equal(ins,SS("or")) )
 		return VM_ARITHMETIC;
-	if(str_toolz_equal(ins,"not"))
+	if(ss_are_equal(ins,SS("not")) )
 		return VM_ARITHMETIC;
-
 	return VM_INVALID_INSTRUCTION;
 }
 
@@ -43,7 +40,7 @@ VM_Parser* vm_create_parser(char *file_name)
 	uint64 pos = 0;
 	uint64 size = INIT_SIZE;
 	VM_Parser* parser = malloc(sizeof(VM_Parser));
-	parser->code = malloc(sizeof(char)*1024);
+	char *code = malloc(sizeof(char)*1024);
 	parser->file_name = malloc(strlen(file_name)+1);
 	strcpy(parser->file_name,file_name);
 	uint64 line_length;
@@ -53,37 +50,32 @@ VM_Parser* vm_create_parser(char *file_name)
 	if(pos+line_length >= size)
 	{
 		size*=2;
-		parser->code = realloc(parser->code,size);
+		code = realloc(code,size);
 	}
-	strcpy(parser->code+pos,line_buf);
-	pos+=line_length+1;
+	strcpy(code+pos,line_buf);
+	pos+=line_length;
 	}
-	parser->code = realloc(parser->code,pos);
-	parser->length = pos;
+	code = realloc(code,pos);
+	parser->code = ss_from_cstr(code);
 	parser->cursor = 0;
 	parser->line_num = 0;
-	parser->cur_line = NULL;
-	parser->line_cursor = 0;
 	return parser;
 }
 
 bool vm_has_next(VM_Parser * parser)
 {
-	return (parser->cursor < parser->length);
+	return (parser->cursor < parser->code.length);
 }
 
 
-// had to check for null term
- char *vm_get_word(VM_Parser *parser)
+ String_Snap vm_get_word(VM_Parser *parser)
 {
-	char *word = str_toolz_first_char(parser->cur_line + parser->line_cursor);
-	parser->line_cursor = word-parser->cur_line;
-	uint64 index = 0;
-	while(!str_toolz_isspace(word[index]) && word[index] !='\0')
-		++index;
-	word[index] ='\0';
-	parser->line_cursor+=index+1;
-	return word;
+	if(!ss_has_next(parser->line_scanner))
+	{
+		fprintf(stderr,"end of line reached, unable to read more on line %lu in file %s\n",parser->line_num,parser->file_name);
+		exit(1);
+	}
+	return ss_next_word(&(parser->line_scanner));
 }
 
 void vm_skip_blanks(VM_Parser *parser)
@@ -91,7 +83,7 @@ void vm_skip_blanks(VM_Parser *parser)
 	bool space_found = true;
 	while(space_found)
 	{
-		switch(parser->code[parser->cursor])
+		switch(parser->code.data[parser->cursor])
 		{
 			case ' ' :
 			case '\t':
@@ -103,9 +95,9 @@ void vm_skip_blanks(VM_Parser *parser)
 				parser->line_num++;
 				break;
 			case '/':
-				if(parser->code[parser->cursor+1] == '/')
+				if(parser->code.data[parser->cursor+1] == '/')
 				{
-					while(parser->code[parser->cursor++] != '\n')
+					while(parser->code.data[parser->cursor++] != '\n')
 						;
 					parser->line_num++;
 				}
@@ -119,46 +111,78 @@ void vm_skip_blanks(VM_Parser *parser)
 	}
 }
 
-// just to see if its filled properly
-void print_parser_contents(VM_Parser *parser)
-{
-	while(vm_has_next(parser))
-	{
-		parser->cursor+=strlen(parser->code+parser->cursor)+1;
-	}
-}
 
-char *vm_read_line(VM_Parser *parser)
+String_Snap vm_read_line(VM_Parser *parser)
 {
-	if(parser->cur_line)
-		free(parser->cur_line); // frees line as to avoid leaks
 	vm_skip_blanks(parser);
-	char *line_start = parser->code+parser->cursor; // line ends in newline
-	char *line_end = str_toolz_eol(line_start);
-	char *temp = str_toolz_substring(line_start,line_end);
-	parser->cur_line = str_toolz_trim_comment(temp);
-	parser->cursor+=strlen(temp)+2;
-	parser->line_num+=1;
-	parser->line_cursor=0;
-	free(temp);
-	return parser->cur_line;
+	String_Snap line = ss_delim_cstr(parser->code.data+parser->cursor,'\n');
+	parser->cursor+=line.length+1;
+	line = ss_trim(line);
+	line = ss_strdelim(line,SS("//"));
+	parser->line_scanner = ss_create_scanner(line);
+	return parser->line_scanner.snap;
 }
 
-VM_Segment vm_segment_type(char *segment)
+VM_Segment vm_segment_type(String_Snap segment)
 {
-	if(str_toolz_equal(segment,"constant"))
+	if(ss_are_equal(segment,SS("constant")))
 		return VM_CONSTANT;
-	if(str_toolz_equal(segment,"static"))
+	if(ss_are_equal(segment,SS("static")))
 		return VM_STATIC;
-	if(str_toolz_equal(segment,"local"))
+	if(ss_are_equal(segment,SS("local")))
 		return VM_LOCAL;
+	if(ss_are_equal(segment,SS("argument")))
+		return VM_ARGUMENT;
+	if(ss_are_equal(segment,SS("pointer")))
+		return VM_POINTER;
+	if(ss_are_equal(segment,SS("this")))
+		return VM_THIS;
+	if(ss_are_equal(segment,SS("that")))
+		return VM_THAT;
+	if(ss_are_equal(segment,SS("temp")))
+		return VM_TEMP;
 	return VM_INVALID_SEGMENT;
+}
+
+bool vm_valid_index(String_Snap index)
+{
+	uint64 i = 0;
+	while(i < index.length)
+	{
+		if(!ss_isdigit(index.data[i]))
+			return false;
+		++i;
+	}
+	return true;
 }
 
 void vm_free_parser(VM_Parser *parser)
 {
-	free(parser->code);
+	free(parser->code.data);
 	free(parser->file_name);
-	free(parser->cur_line);
 	free(parser);
 }
+
+VM_Op vm_op_type(String_Snap op)
+{
+	if(ss_are_equal(op,SS("add")))
+		return VM_ADD;
+	if(ss_are_equal(op,SS("sub")))
+		return VM_SUB;
+	if(ss_are_equal(op,SS("and")))
+		return VM_AND;
+	if(ss_are_equal(op,SS("or")))
+		return VM_OR;
+	if(ss_are_equal(op,SS("eq")))
+		return VM_EQ;
+	if(ss_are_equal(op,SS("lt")))
+		return VM_LT;
+	if(ss_are_equal(op,SS("gt")))
+		return VM_GT;
+	if(ss_are_equal(op,SS("not")))
+		return VM_NOT;
+	if(ss_are_equal(op,SS("neg")))
+		return VM_NEG;
+	return VM_INVALID_OP;
+}
+

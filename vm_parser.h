@@ -2,10 +2,10 @@
 #ifndef _VM_PARER_H_
 #define _VM_PARSER_H_
 #include<stdbool.h>
+#include"libs/string_snap.h"
 
 // for freeing parser object
 #define VM_FREE_PARSER(parser)\
-	free(parser->code);\
 	free(parser->file_name;\
 	free(parser);
 
@@ -24,24 +24,22 @@
 typedef unsigned long long uint64;
 typedef unsigned short uint16;
 typedef struct VM_Parser {
-	 char *code;
+	String_Snap code;
+	Snap_Scanner line_scanner;
 	 char *file_name;
-	 char *cur_line;
-	uint64 length;
 	uint64 cursor;
-	uint64 line_cursor;
 	uint64 line_num;
 } VM_Parser;
 
 typedef enum VM_Instruction {
-	VM_PUSH,
+	VM_PUSH = 0,
 	VM_POP,
 	VM_ARITHMETIC,
 	VM_INVALID_INSTRUCTION
 } VM_Instruction;
 
 typedef enum VM_Segment {
-	VM_STATIC,
+	VM_STATIC = 0,
 	VM_LOCAL,
 	VM_ARGUMENT,
 	VM_THIS,
@@ -51,21 +49,38 @@ typedef enum VM_Segment {
 	VM_CONSTANT,
 	VM_INVALID_SEGMENT
 }VM_Segment;
+
+typedef enum VM_Op{
+	VM_ADD= 0,
+	VM_SUB,
+	VM_EQ,
+	VM_GT,
+	VM_LT,
+	VM_AND,
+	VM_OR,
+	VM_NOT,
+	VM_NEG,
+	VM_INVALID_OP
+} VM_Op;
+
 VM_Parser* vm_create_parser(char *file);
 
-VM_Instruction vm_instruction_type(char *ins);
+VM_Instruction vm_instruction_type(String_Snap ins);
 
-VM_Segment vm_segment_type(char *segment);
+VM_Segment vm_segment_type(String_Snap segment);
 
- char* vm_get_word(VM_Parser *parser);
+String_Snap vm_get_word(VM_Parser *parser);
 
 
 bool vm_has_next();
 
 void vm_skip_blanks(VM_Parser *parser);
 
-char* vm_read_line(VM_Parser *parser);
+String_Snap vm_read_line(VM_Parser *parser);
 
 void vm_free_parser(VM_Parser *parser);
+bool vm_valid_index(String_Snap index);
+void vm_free_parser(VM_Parser *parser);
+VM_Op vm_op_type(String_Snap op);
 
 #endif
