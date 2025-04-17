@@ -4,10 +4,6 @@
 #include<stdbool.h>
 #include"libs/string_snap.h"
 
-// for freeing parser object
-#define VM_FREE_PARSER(parser)\
-	free(parser->file_name;\
-	free(parser);
 
 #define STATIC_BASE 16
 #define STACK_BASE SP
@@ -35,6 +31,12 @@ typedef enum VM_Instruction {
 	VM_PUSH = 0,
 	VM_POP,
 	VM_ARITHMETIC,
+	VM_LABEL,
+	VM_FUNCTION,
+	VM_CALL,
+	VM_IF,
+	VM_GOTO,
+	VM_RETURN,
 	VM_INVALID_INSTRUCTION
 } VM_Instruction;
 

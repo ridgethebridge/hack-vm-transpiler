@@ -22,6 +22,8 @@ int main(int argc, char **argv)
 	}
 	VM_Parser *parser = vm_create_parser(argv[1]);
 	VM_Writer *writer = vm_create_writer("output.asm");
+	// to be used for labels
+	String_Snap last_function;
 
 	while(vm_has_next(parser))
 	{
@@ -32,6 +34,16 @@ int main(int argc, char **argv)
 		{
 			String_Snap segment_snap = vm_get_word(parser);
 			String_Snap index_snap = vm_get_word(parser);
+			if(!segment_snap.data)
+			{
+				fprintf(stderr,"segment is missing!\n");
+				return INVALID_SEGMENT;
+			}
+			if(!index_snap.data)
+			{
+				fprintf(stderr,"index is missing!\n");
+				return INVALID_INDEX;
+			}
 			if(ss_has_next(parser->line_scanner))
 			{
 				fprintf(stderr,"too much stuff on line!\n");
@@ -65,6 +77,17 @@ int main(int argc, char **argv)
 		{
 		 	String_Snap segment_snap = vm_get_word(parser);
 			String_Snap index_snap  = vm_get_word(parser);
+			if(!segment_snap.data)
+			{
+				fprintf(stderr,"segment is missing!\n");
+				return INVALID_SEGMENT;
+			}
+			if(!index_snap.data)
+			{
+				fprintf(stderr,"index is missing!\n");
+				return INVALID_INDEX;
+			}
+
 			if(ss_has_next(parser->line_scanner))
 			{
 				fprintf(stderr,"too much stuff on line!\n");
@@ -83,6 +106,65 @@ int main(int argc, char **argv)
 			}
 			vm_write_pop(writer,segment,index_snap);
 		}
+
+		else if(ins == VM_FUNCTION)
+		{
+			String_Snap function_name = vm_get_word(parser);
+			if(ss_has_next(parser->line_scanner))
+			{
+				fprintf(stderr,"too much stuff for function!\n");
+			}
+			if(!function_name.data)
+			{
+				fprintf(stderr,"missing name for function!\n");
+			}
+			last_function = function_name;
+			vm_write_function(writer,function_name);
+		}
+
+		else if(ins == VM_LABEL)
+		{
+			String_Snap label_name = vm_get_word(parser);
+			if(ss_has_next(parser->line_scanner))
+			{
+				fprintf(stderr,"too much stuff for label!\n");
+			}
+			if(!label_name.data)
+			{
+				fprintf(stderr,"missing name for label!\n");
+			}
+			vm_write_label(writer,label_name,last_function);
+		}
+		
+		else if(ins == VM_GOTO)
+		{
+			String_Snap label  = vm_get_word(parser);
+			if(ss_has_next(parser->line_scanner))
+			{
+				fprintf(stderr,"too much stuff for goto!\n");
+			}
+			if(!label.data)
+			{
+				fprintf(stderr,"missing name for goto!\n");
+			}
+
+			vm_write_goto(writer,label,last_function);
+		}
+		else if(ins == VM_IF)
+		{
+			String_Snap label  = vm_get_word(parser);
+			if(ss_has_next(parser->line_scanner))
+			{
+				fprintf(stderr,"too much stuff for if!\n");
+			}
+			if(!label.data)
+			{
+				fprintf(stderr,"missing name for if!\n");
+			}
+
+			vm_write_if(writer,label,last_function);
+		}
+			
 	}
 	vm_free_parser(parser);
 	vm_free_writer(writer);

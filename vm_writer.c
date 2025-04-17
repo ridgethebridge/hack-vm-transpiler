@@ -49,15 +49,20 @@
 	"@SP\n"\
 	"A=M-1\n"\
 	"M=-1\n"
+// counter for labels, used for comparison commands
 static uint64 cond_counter = 0;
+
+// list of strings containing segment names, accessed with enum values
 static char segment_list[][5]= {
 	XSTR(STATIC_BASE),XSTR(LOCAL_BASE),XSTR(ARG_BASE),XSTR(THIS_BASE),
 	XSTR(THAT_BASE),XSTR(THIS_BASE),XSTR(TEMP_BASE),XSTR(STACK_BASE)
 	};
+// list of oeprations, accessed with enums
 static char op_list[][256] = {
 	"M=D+M","M=M-D",EQ_OP,GT_OP,LT_OP,"M=D&M",
 	"M=D|M","M=!M","M=-M"
 };
+
 VM_Writer *vm_create_writer(char *file)
 {
 	FILE *output = fopen(file,"w");
@@ -197,3 +202,27 @@ void vm_write_pop(VM_Writer *writer,VM_Segment segment, String_Snap index)
 		fprintf(writer->output,"M=D\n"); 
 }
 
+void vm_write_label(VM_Writer *writer, String_Snap label, String_Snap function)
+{
+	fprintf(writer->output,"(%.*s$%.*s)\n",function.length,function.data,label.length,label.data);
+}
+
+void vm_write_function(VM_Writer *writer, String_Snap function)
+{
+	fprintf(writer->output,"(%.*s)\n",function.length,function.data);
+}
+
+void vm_write_goto(VM_Writer *writer,String_Snap label, String_Snap function)
+{
+	fprintf(writer->output,"@%.*s$%.*s\n",function.length,function.data,label.length,label.data);
+	fprintf(writer->output,"0;JMP\n");
+}
+
+void vm_write_if(VM_Writer *writer,String_Snap label, String_Snap function)
+{
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"AM=M-1\n");
+	fprintf(writer->output,"D=M\n");
+	fprintf(writer->output,"@%.*s$%.*s\n",function.length,function.data,label.length,label.data);
+	fprintf(writer->output,"D;JNE\n");
+}

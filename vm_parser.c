@@ -27,6 +27,16 @@ VM_Instruction vm_instruction_type(String_Snap ins)
 		return VM_ARITHMETIC;
 	if(ss_are_equal(ins,SS("not")) )
 		return VM_ARITHMETIC;
+	if(ss_are_equal(ins,SS("label")))
+		return VM_LABEL;
+	if(ss_are_equal(ins,SS("function")))
+		return VM_FUNCTION;
+	if(ss_are_equal(ins,SS("goto")))
+		return VM_GOTO;
+	if(ss_are_equal(ins,SS("if-goto")))
+		return VM_IF;
+	if(ss_are_equal(ins,SS("return")))
+		return VM_RETURN;
 	return VM_INVALID_INSTRUCTION;
 }
 
@@ -68,12 +78,15 @@ bool vm_has_next(VM_Parser * parser)
 }
 
 
+// returns empty snap with null on eol
  String_Snap vm_get_word(VM_Parser *parser)
 {
 	if(!ss_has_next(parser->line_scanner))
 	{
-		fprintf(stderr,"end of line reached, unable to read more on line %lu in file %s\n",parser->line_num,parser->file_name);
-		exit(1);
+		return (String_Snap) {
+					.data = 0,
+					.length = 0
+				};
 	}
 	return ss_next_word(&(parser->line_scanner));
 }
