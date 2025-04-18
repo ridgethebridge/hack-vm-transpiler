@@ -1,4 +1,5 @@
 #include"vm_writer.h"
+#include<string.h>
 
 #define INPUT_ERROR 1
 #define ARITHMETIC_ERROR 2
@@ -12,18 +13,31 @@ printf("usage: ./VMtranslator [flags] file...\n");
 printf("flags:\n");
 printf("-o <name>	names the assembly output to name specified\n");
 }
+
+int shift(int *argc, char ***argv)
+{
+	*argc-=1;
+	*argv+=1;
+}
+
 int main(int argc, char **argv)
 {
+	char *output_name;
 	if(argc < 2)
 	{
 		fprintf(stderr,"need to put vm source files\n");
 		usage();
 		return INPUT_ERROR;
 	}
-	VM_Parser *parser = vm_create_parser(argv[1]);
+
+
 	VM_Writer *writer = vm_create_writer("output.asm");
+	while(argc > 1) 
+	{
+		shift(&argc,&argv);
+	VM_Parser *parser = vm_create_parser(argv[0]);
 	// to be used for labels
-	String_Snap last_function;
+	String_Snap last_function = {0,0};
 
 	while(vm_has_next(parser))
 	{
@@ -55,12 +69,8 @@ int main(int argc, char **argv)
 				fprintf(stderr,"invalid segment %.*s\n",segment_snap.length, segment_snap.data);
 				return INVALID_SEGMENT;
 			}
-			if(!vm_valid_index(index_snap))
-			{
-				fprintf(stderr,"invalid index %.*s\n",index_snap.length,index_snap.data);
-				return INVALID_INDEX;
-			}
-			vm_write_push(writer,segment,index_snap);
+			uint16 index = vm_index_to_uint16(index_snap);
+			vm_write_push(writer,segment,index);
 		}
 		else if(ins == VM_ARITHMETIC)
 		{
@@ -99,17 +109,14 @@ int main(int argc, char **argv)
 				fprintf(stderr,"invalid segment %.*s\n",segment_snap.length, segment_snap.data);
 				return INVALID_SEGMENT;
 			}
-			if(!vm_valid_index(index_snap))
-			{
-				fprintf(stderr,"invalid index %.*s\n",index_snap.length,index_snap.data);
-				return INVALID_INDEX;
-			}
-			vm_write_pop(writer,segment,index_snap);
+			uint16 index = vm_index_to_uint16(index_snap);
+			vm_write_pop(writer,segment,index);
 		}
 
 		else if(ins == VM_FUNCTION)
 		{
 			String_Snap function_name = vm_get_word(parser);
+			String_Snap num_locals = vm_get_word(parser);
 			if(ss_has_next(parser->line_scanner))
 			{
 				fprintf(stderr,"too much stuff for function!\n");
@@ -120,6 +127,22 @@ int main(int argc, char **argv)
 			}
 			last_function = function_name;
 			vm_write_function(writer,function_name);
+		}
+		else if(ins == VM_CALL)
+		{
+			String_Snap function_name = vm_get_word(parser);
+			String_Snap num_args = vm_get_word(parser);
+			
+			if(!function_name.data)
+			{
+				fprintf(stderr,"no name given in call!\n");
+			}
+			if(!num_args.data)
+			{
+				fprintf(stderr,"numbr of args not given!\n");
+			}
+			uint16 args = vm_index_to_uint16(num_args);
+			vm_write_call(writer,function_name,args);
 		}
 
 		else if(ins == VM_LABEL)
@@ -133,6 +156,9 @@ int main(int argc, char **argv)
 			{
 				fprintf(stderr,"missing name for label!\n");
 			}
+			if(!last_function.data)
+				last_function = SS("null");
+
 			vm_write_label(writer,label_name,last_function);
 		}
 		
@@ -164,9 +190,21 @@ int main(int argc, char **argv)
 
 			vm_write_if(writer,label,last_function);
 		}
+		else if(ins == VM_RETURN)
+		{
+			if(ss_has_next(parser->line_scanner))
+			{
+				fprintf(stderr,"too much stuff for return!\n");
+				return 90;
+			}
+			vm_write_return(writer);
+			last_function = SS("null");
+
+		}
 			
 	}
 	vm_free_parser(parser);
+	}
 	vm_free_writer(writer);
 return 0;
 }

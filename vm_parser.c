@@ -37,6 +37,8 @@ VM_Instruction vm_instruction_type(String_Snap ins)
 		return VM_IF;
 	if(ss_are_equal(ins,SS("return")))
 		return VM_RETURN;
+	if(ss_are_equal(ins,SS("call")))
+		return VM_CALL;
 	return VM_INVALID_INSTRUCTION;
 }
 
@@ -69,6 +71,7 @@ VM_Parser* vm_create_parser(char *file_name)
 	parser->code = ss_from_cstr(code);
 	parser->cursor = 0;
 	parser->line_num = 0;
+	fclose(file);
 	return parser;
 }
 
@@ -157,16 +160,21 @@ VM_Segment vm_segment_type(String_Snap segment)
 	return VM_INVALID_SEGMENT;
 }
 
-bool vm_valid_index(String_Snap index)
+uint16 vm_index_to_uint16(String_Snap index)
 {
 	uint64 i = 0;
+	uint16 number = 0;
 	while(i < index.length)
 	{
 		if(!ss_isdigit(index.data[i]))
-			return false;
+		{
+			fprintf(stderr,"invalid index, not a number\n");
+			exit(1);
+		}
+		number= number*10 +(index.data[i]-'0');
 		++i;
 	}
-	return true;
+	return number;
 }
 
 void vm_free_parser(VM_Parser *parser)

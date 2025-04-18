@@ -51,6 +51,7 @@
 	"M=-1\n"
 // counter for labels, used for comparison commands
 static uint64 cond_counter = 0;
+static uint64 return_counter = 0;
 
 // list of strings containing segment names, accessed with enum values
 static char segment_list[][5]= {
@@ -87,10 +88,10 @@ void vm_free_writer(VM_Writer *writer)
 	free(writer);
 }
 
-void vm_write_push(VM_Writer *writer, VM_Segment segment, String_Snap index)
+void vm_write_push(VM_Writer *writer, VM_Segment segment, uint16 index)
 {
 		// always get constant index value
-		fprintf(writer->output,"@%.*s\n",index.length,index.data);
+		fprintf(writer->output,"@%hu\n",index);
 		fprintf(writer->output,"D=A\n");
 		char *segment_base = segment_list[segment]; // gets segment string
 		fprintf(writer->output,"@%s\n",segment_base);
@@ -172,9 +173,9 @@ void vm_write_arithmetic(VM_Writer *writer,VM_Op command)
 		fprintf(writer->output,"%s\n",op);
 }
 
-void vm_write_pop(VM_Writer *writer,VM_Segment segment, String_Snap index)
+void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 {
-		fprintf(writer->output,"@%.*s\n",index.length,index.data);
+		fprintf(writer->output,"@%hu\n",index);
 		fprintf(writer->output,"D=A\n");
 		char *segment_base = segment_list[segment]; // gets segment string
 		fprintf(writer->output,"@%s\n",segment_base);
@@ -225,4 +226,70 @@ void vm_write_if(VM_Writer *writer,String_Snap label, String_Snap function)
 	fprintf(writer->output,"D=M\n");
 	fprintf(writer->output,"@%.*s$%.*s\n",function.length,function.data,label.length,label.data);
 	fprintf(writer->output,"D;JNE\n");
+}
+
+void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
+{
+	// pushes return address onto stack
+	fprintf(writer->output,"@return.address.%lu\n",return_counter);
+	fprintf(writer->output,"D=A\n");
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"A=M\n");
+	fprintf(writer->output,"M=D\n");
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"M=M+1\n");
+
+	// saves registers states
+	vm_write_push(writer,VM_LOCAL,0);
+	vm_write_push(writer,VM_ARGUMENT,0);
+	vm_write_push(writer,VM_POINTER,0); //pushing this
+	vm_write_push(writer,VM_POINTER,1); // pushing that
+	
+	//changes arg to point to base of pushed arguments on stack
+	fprintf(writer->output,"@5\n");
+	fprintf(writer->output,"D=A\n");
+	fprintf(writer->output,"@%hu\n",num_args);
+	fprintf(writer->output,"D=D+A\n");
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"D=M-D\n");
+	fprintf(writer->output,"@ARG\n");
+	fprintf(writer->output,"M=D\n");
+	// sets locals base to top of the stack
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"D=M\n");
+	fprintf(writer->output,"@LCL\n");
+	fprintf(writer->output,"M=D\n");
+	// jumps to function and return address label
+	fprintf(writer->output,"@%.*s\n",function.length,function.data);
+	fprintf(writer->output,"0;JMP\n");
+	fprintf(writer->output,"(return.address.%lu)\n",return_counter);
+	++return_counter;
+
+}
+
+void vm_write_return(VM_Writer *writer)
+{
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"A=M\n");
+	fprintf(writer->output,"D=M\n"); //return value
+	fprintf(writer->output,"@%s\n",XSTR(GEN_1));
+	fprintf(writer->output,"M=D\n");// holds return value
+	fprintf(writer->output,"@LCL\n");
+	fprintf(writer->output,"D=M\n");
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"M=D\n"); // restores stack frame to beginning of frame
+	vm_write_pop(writer,VM_POINTER,1);
+	vm_write_pop(writer,VM_POINTER,0);
+	vm_write_pop(writer,VM_ARGUMENT,0);
+	vm_write_pop(writer,VM_LOCAL,0);
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"A=M\n");
+	fprintf(writer->output,"D=M\n");//return address
+	fprintf(writer->output,"@%s\n",XSTR(GEN_2));
+	fprintf(writer->output,"M=D\n");
+	fprintf(writer->output,"@%s\n",XSTR(GEN_1));
+	fprintf(writer->output,"D=M\n");
+	fprintf(writer->output,"@SP\n");
+	fprintf(writer->output,"A=M\n");
+	fprintf(writer->output,"M=D\n"); //return value is at top of stack
 }

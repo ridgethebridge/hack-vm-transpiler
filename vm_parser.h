@@ -81,7 +81,7 @@ void vm_skip_blanks(VM_Parser *parser);
 String_Snap vm_read_line(VM_Parser *parser);
 
 void vm_free_parser(VM_Parser *parser);
-bool vm_valid_index(String_Snap index);
+uint16 vm_index_to_uint16(String_Snap index);
 void vm_free_parser(VM_Parser *parser);
 VM_Op vm_op_type(String_Snap op);
 
