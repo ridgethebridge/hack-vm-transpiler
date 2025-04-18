@@ -32,12 +32,12 @@ int main(int argc, char **argv)
 
 
 	VM_Writer *writer = vm_create_writer("output.asm");
+	String_Snap last_function = {0,0};
 	while(argc > 1) 
 	{
 		shift(&argc,&argv);
 	VM_Parser *parser = vm_create_parser(argv[0]);
 	// to be used for labels
-	String_Snap last_function = {0,0};
 
 	while(vm_has_next(parser))
 	{
@@ -50,23 +50,27 @@ int main(int argc, char **argv)
 			String_Snap index_snap = vm_get_word(parser);
 			if(!segment_snap.data)
 			{
-				fprintf(stderr,"segment is missing!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"segment is missing in statement %.*s\n",segment_snap.length,segment_snap.data);
 				return INVALID_SEGMENT;
 			}
 			if(!index_snap.data)
 			{
-				fprintf(stderr,"index is missing!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"index is missing in statement %.*s\n",index_snap.length,index_snap.data);
 				return INVALID_INDEX;
 			}
 			if(ss_has_next(parser->line_scanner))
 			{
-				fprintf(stderr,"too much stuff on line!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr," excess arguments %.*s passed to binary operator push",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
 				return OVERFLOW_ERROR;
 			}
 			VM_Segment segment = vm_segment_type(segment_snap);
 			if(segment == VM_INVALID_SEGMENT)
 			{
-				fprintf(stderr,"invalid segment %.*s\n",segment_snap.length, segment_snap.data);
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"segment %.*s is an invalid segment\n",segment_snap.length,segment_snap.data);
 				return INVALID_SEGMENT;
 			}
 			uint16 index = vm_index_to_uint16(index_snap);
@@ -76,8 +80,8 @@ int main(int argc, char **argv)
 		{
 			if(ss_has_next(parser->line_scanner))
 			{
-				fprintf(stderr,"error with arithmetic command on line %lu in file %s\n",parser->line_num,parser->file_name);
-				fprintf(stderr,"arithmetic commands are unary %.*s should not come after %.*s\n",parser->line_scanner.snap.length,parser->line_scanner.snap.data,command.length,command.data);
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"arithmetic commands are unary, %.*s should not come after %.*s\n",parser->line_scanner.snap.length,parser->line_scanner.snap.data,command.length,command.data);
 				return ARITHMETIC_ERROR;
 			}
 			VM_Op operation = vm_op_type(command);
@@ -89,24 +93,28 @@ int main(int argc, char **argv)
 			String_Snap index_snap  = vm_get_word(parser);
 			if(!segment_snap.data)
 			{
-				fprintf(stderr,"segment is missing!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"segment is missing in statement %.*s\n",segment_snap.length,segment_snap.data);
 				return INVALID_SEGMENT;
 			}
 			if(!index_snap.data)
 			{
-				fprintf(stderr,"index is missing!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"index is missing in statement %.*s\n",index_snap.length,index_snap.data);
 				return INVALID_INDEX;
 			}
 
 			if(ss_has_next(parser->line_scanner))
 			{
-				fprintf(stderr,"too much stuff on line!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr," excess arguments %.*s passed to binary operator pop",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
 				return OVERFLOW_ERROR;
 			}
 			VM_Segment segment = vm_segment_type(segment_snap);
 			if(segment == VM_INVALID_SEGMENT)
 			{
-				fprintf(stderr,"invalid segment %.*s\n",segment_snap.length, segment_snap.data);
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"segment %.*s is an invalid segment\n",segment_snap.length,segment_snap.data);
 				return INVALID_SEGMENT;
 			}
 			uint16 index = vm_index_to_uint16(index_snap);
@@ -119,11 +127,15 @@ int main(int argc, char **argv)
 			String_Snap num_locals = vm_get_word(parser);
 			if(ss_has_next(parser->line_scanner))
 			{
-				fprintf(stderr,"too much stuff for function!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr," excess arguments %.*s passed to binary operator function",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
+				return OVERFLOW_ERROR;
 			}
 			if(!function_name.data)
 			{
-				fprintf(stderr,"missing name for function!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"function name is missing\n");
+				return 1;
 			}
 			last_function = function_name;
 			vm_write_function(writer,function_name);
@@ -135,11 +147,21 @@ int main(int argc, char **argv)
 			
 			if(!function_name.data)
 			{
-				fprintf(stderr,"no name given in call!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"function name is missing for call operation\n");
+				return -1;
 			}
 			if(!num_args.data)
 			{
-				fprintf(stderr,"numbr of args not given!\n");
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr,"number of arguments not specifed to call operator\n");
+				return -1;
+			}
+			if(ss_has_next(parser->line_scanner))
+			{
+				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
+				fprintf(stderr," excess arguments %.*s passed to binary operator call",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
+				return OVERFLOW_ERROR;
 			}
 			uint16 args = vm_index_to_uint16(num_args);
 			vm_write_call(writer,function_name,args);

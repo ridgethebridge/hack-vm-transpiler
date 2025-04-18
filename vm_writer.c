@@ -74,10 +74,11 @@ VM_Writer *vm_create_writer(char *file)
 	strcpy(writer->file_name,file);
 	writer->output=output;
 	// sets the stack up
-	fprintf(output,"@256\n");
-	fprintf(output,"D=A\n");
-	fprintf(output,"@SP\n");
-	fprintf(output,"M=D\n");
+	#define STACK_INIT "@256\n"\
+			   "D=A\n"\
+			   "@SP\n"\
+			   "M=D\n"
+	fprintf(writer->output,STACK_INIT);
 	return writer;
 }
 
@@ -91,17 +92,19 @@ void vm_free_writer(VM_Writer *writer)
 void vm_write_push(VM_Writer *writer, VM_Segment segment, uint16 index)
 {
 		// always get constant index value
-		fprintf(writer->output,"@%hu\n",index);
-		fprintf(writer->output,"D=A\n");
-		char *segment_base = segment_list[segment]; // gets segment string
-		fprintf(writer->output,"@%s\n",segment_base);
+	char *segment_base = segment_list[segment]; 
+	#define PUSH_INIT "@%hu\n"\
+			  "D=A\n"\
+			  "@%s\n"
+	fprintf(writer->output,PUSH_INIT,index,segment_base);
 	switch(segment)
 	{
 		case VM_CONSTANT:
-			fprintf(writer->output,"A=M\n");
-			fprintf(writer->output,"M=D\n");
-			fprintf(writer->output,"@SP\n");
-			fprintf(writer->output,"M=M+1\n");
+			#define PUSH_CONSTANT "A=M\n"\
+					      "M=D\n"\
+					      "@SP\n"\
+					      "M=M+1\n"
+			fprintf(writer->output,PUSH_CONSTANT);
 			return;
 		case VM_THIS:
 		case VM_THAT:
@@ -111,13 +114,15 @@ void vm_write_push(VM_Writer *writer, VM_Segment segment, uint16 index)
 			break;
 	}
 		// all  but constant have this config
-		fprintf(writer->output,"A=D+A\n");
-		fprintf(writer->output,"D=M\n");
-		fprintf(writer->output,"@SP\n"); 
-		fprintf(writer->output,"A=M\n");
-		fprintf(writer->output,"M=D\n");
-		fprintf(writer->output,"@SP\n");
-		fprintf(writer->output,"M=M+1\n");
+		
+	#define WRITE_PUSH "A=D+A\n"\
+			   "D=M\n"\
+			   "@SP\n"\
+			   "A=M\n"\
+                           "M=D\n"\
+                           "@SP\n"\
+                           "M=M+1\n"
+	fprintf(writer->output,WRITE_PUSH);
 }
 
 // optimize this
@@ -170,15 +175,15 @@ void vm_write_arithmetic(VM_Writer *writer,VM_Op command)
 			return;
 		}
 	// write the actual operation
-		fprintf(writer->output,"%s\n",op);
+	fprintf(writer->output,"%s\n",op);
 }
 
 void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 {
-		fprintf(writer->output,"@%hu\n",index);
-		fprintf(writer->output,"D=A\n");
-		char *segment_base = segment_list[segment]; // gets segment string
-		fprintf(writer->output,"@%s\n",segment_base);
+	fprintf(writer->output,"@%hu\n",index);
+	fprintf(writer->output,"D=A\n");
+	char *segment_base = segment_list[segment]; // gets segment string
+	fprintf(writer->output,"@%s\n",segment_base);
 
 	switch(segment)
 	{
@@ -190,17 +195,20 @@ void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 			break;
 	}
 		// all do this routine
-		fprintf(writer->output,"A=D+A\n");
-		fprintf(writer->output,"D=A\n");
-		fprintf(writer->output,"@%s\n",XSTR(GEN_1));
-		fprintf(writer->output,"M=D\n");
-		fprintf(writer->output,"@SP\n");
-		fprintf(writer->output,"M=M-1\n");
-		fprintf(writer->output,"A=M\n");
-		fprintf(writer->output,"D=M\n"); 
-		fprintf(writer->output,"@%s\n",XSTR(GEN_1)); 
-		fprintf(writer->output,"A=M\n"); 
-		fprintf(writer->output,"M=D\n"); 
+
+	#define WRITE_POP "A=D+A\n"\
+                           "D=A\n"\
+                           "@%s\n"\
+                           "M=D\n"\
+                           "@SP\n"\
+                           "M=M-1\n"\
+                           "A=M\n"\
+                           "D=M\n"\
+                           "@%s\n"\
+                           "A=M\n"\
+                           "M=D\n"
+	fprintf(writer->output,WRITE_POP,XSTR(GEN_1),XSTR(GEN_1));
+
 }
 
 void vm_write_label(VM_Writer *writer, String_Snap label, String_Snap function)
@@ -221,23 +229,28 @@ void vm_write_goto(VM_Writer *writer,String_Snap label, String_Snap function)
 
 void vm_write_if(VM_Writer *writer,String_Snap label, String_Snap function)
 {
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"AM=M-1\n");
-	fprintf(writer->output,"D=M\n");
-	fprintf(writer->output,"@%.*s$%.*s\n",function.length,function.data,label.length,label.data);
-	fprintf(writer->output,"D;JNE\n");
+
+	#define IF_OUTPUT "@SP\n"\
+		"AM=M-1\n"\
+		"D=M\n"\
+		"@%.*s$%.*s\n"\
+		"D;JNE\n"
+
+	fprintf(writer->output,IF_OUTPUT,function.length,function.data,label.length,label.data);
+
 }
 
 void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
 {
 	// pushes return address onto stack
-	fprintf(writer->output,"@return.address.%lu\n",return_counter);
-	fprintf(writer->output,"D=A\n");
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"A=M\n");
-	fprintf(writer->output,"M=D\n");
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"M=M+1\n");
+	#define STACK_PUSH "@return.address.%lu\n"\
+                          "D=A\n"\
+                          "@SP\n"\
+                          "A=M\n"\
+                          "M=D\n"\
+                          "@SP\n"\
+                          "M=M+1\n"
+	fprintf(writer->output,STACK_PUSH,return_counter);
 
 	// saves registers states
 	vm_write_push(writer,VM_LOCAL,0);
@@ -245,51 +258,55 @@ void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
 	vm_write_push(writer,VM_POINTER,0); //pushing this
 	vm_write_push(writer,VM_POINTER,1); // pushing that
 	
-	//changes arg to point to base of pushed arguments on stack
-	fprintf(writer->output,"@5\n");
-	fprintf(writer->output,"D=A\n");
-	fprintf(writer->output,"@%hu\n",num_args);
-	fprintf(writer->output,"D=D+A\n");
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"D=M-D\n");
-	fprintf(writer->output,"@ARG\n");
-	fprintf(writer->output,"M=D\n");
-	// sets locals base to top of the stack
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"D=M\n");
-	fprintf(writer->output,"@LCL\n");
-	fprintf(writer->output,"M=D\n");
-	// jumps to function and return address label
-	fprintf(writer->output,"@%.*s\n",function.length,function.data);
-	fprintf(writer->output,"0;JMP\n");
-	fprintf(writer->output,"(return.address.%lu)\n",return_counter);
+	// sets arg, stack frame, and jumps to function
+	#define WRITE_CALL "@5\n"\
+                          "D=A\n"\
+                          "@%hu\n"\
+                          "D=D+A\n"\
+                          "@SP\n"\
+                          "D=M-D\n"\
+                          "@ARG\n"\
+                          "M=D\n"\
+                          "@SP\n"\
+                          "D=M\n"\
+                          "@LCL\n"\
+                          "M=D\n"\
+			  "@%.*s\n"\
+			  "0;JMP\n"\
+			  "(return.address.%lu)\n"
+	fprintf(writer->output,WRITE_CALL,num_args,function.length,function.data,return_counter);
 	++return_counter;
 
 }
 
 void vm_write_return(VM_Writer *writer)
 {
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"A=M\n");
-	fprintf(writer->output,"D=M\n"); //return value
-	fprintf(writer->output,"@%s\n",XSTR(GEN_1));
-	fprintf(writer->output,"M=D\n");// holds return value
-	fprintf(writer->output,"@LCL\n");
-	fprintf(writer->output,"D=M\n");
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"M=D\n"); // restores stack frame to beginning of frame
+	#define STACK_RESTORE   "@SP\n"\
+				"A=M\n"\
+				"D=M\n"\
+				"@%s\n"\
+				"M=D\n"\
+				"@LCL\n"\
+				"D=M\n"\
+				"@SP\n"\
+				"M=D\n"
+	fprintf(writer->output,STACK_RESTORE,XSTR(GEN_1));
 	vm_write_pop(writer,VM_POINTER,1);
 	vm_write_pop(writer,VM_POINTER,0);
 	vm_write_pop(writer,VM_ARGUMENT,0);
 	vm_write_pop(writer,VM_LOCAL,0);
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"A=M\n");
-	fprintf(writer->output,"D=M\n");//return address
-	fprintf(writer->output,"@%s\n",XSTR(GEN_2));
-	fprintf(writer->output,"M=D\n");
-	fprintf(writer->output,"@%s\n",XSTR(GEN_1));
-	fprintf(writer->output,"D=M\n");
-	fprintf(writer->output,"@SP\n");
-	fprintf(writer->output,"A=M\n");
-	fprintf(writer->output,"M=D\n"); //return value is at top of stack
+	#define WRITE_RETURN "@SP\n"\
+                             "A=M\n"\
+                             "D=M\n"\
+                             "@%s\n"\
+                             "M=D\n"\
+                             "@%s\n"\
+                             "D=M\n"\
+                             "@SP\n"\
+                             "A=M\n"\
+                             "M=D\n"\
+                             "@%s\n"\
+                             "A=M\n"\
+                             "0;JMP\n"
+	fprintf(writer->output,WRITE_RETURN,XSTR(GEN_2),XSTR(GEN_1),XSTR(GEN_2));
 }
