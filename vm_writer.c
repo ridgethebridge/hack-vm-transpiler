@@ -78,7 +78,7 @@ VM_Writer *vm_create_writer(char *file)
 			   "D=A\n"\
 			   "@SP\n"\
 			   "M=D\n"
-	fprintf(writer->output,STACK_INIT);
+//	fprintf(writer->output,STACK_INIT);
 	return writer;
 }
 
@@ -216,9 +216,13 @@ void vm_write_label(VM_Writer *writer, String_Snap label, String_Snap function)
 	fprintf(writer->output,"(%.*s$%.*s)\n",function.length,function.data,label.length,label.data);
 }
 
-void vm_write_function(VM_Writer *writer, String_Snap function)
+void vm_write_function(VM_Writer *writer, String_Snap function,uint16 num_locals)
 {
 	fprintf(writer->output,"(%.*s)\n",function.length,function.data);
+	for(uint16 i = 0; i < num_locals; ++i)
+	{
+		vm_write_push(writer,VM_CONSTANT,0);
+	}
 }
 
 void vm_write_goto(VM_Writer *writer,String_Snap label, String_Snap function)
@@ -281,32 +285,51 @@ void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
 
 void vm_write_return(VM_Writer *writer)
 {
-	#define STACK_RESTORE   "@SP\n"\
-				"A=M\n"\
-				"D=M\n"\
-				"@%s\n"\
-				"M=D\n"\
-				"@LCL\n"\
+	#define SAVE_LCL "@LCL\n"\
+			   "D=M\n"\
+			   "@%s\n"\
+			   "M=D\n"\
+			   "@5\n"\
+			   "D=A\n"\
+			   "@LCL\n"\
+			   "A=M\n"\
+			   "A=A-D\n"\
+			   "D=M\n"\
+			   "@%s\n"\
+			   "M=D\n" // saves return address to gen2
+
+	fprintf(writer->output,SAVE_LCL,XSTR(GEN_3),XSTR(GEN_2));
+	vm_write_pop(writer,VM_ARGUMENT,0); // pops return value to 1st arg pushed, new top of stack
+	
+	#define STACK_RESTORE "@ARG\n"\
 				"D=M\n"\
 				"@SP\n"\
-				"M=D\n"
-	fprintf(writer->output,STACK_RESTORE,XSTR(GEN_1));
-	vm_write_pop(writer,VM_POINTER,1);
-	vm_write_pop(writer,VM_POINTER,0);
-	vm_write_pop(writer,VM_ARGUMENT,0);
-	vm_write_pop(writer,VM_LOCAL,0);
-	#define WRITE_RETURN "@SP\n"\
-                             "A=M\n"\
+				"M=D+1\n"
+	fprintf(writer->output,STACK_RESTORE);
+
+	#define RESTORE_STATE "@%s\n"\
+                             "AM=M-1\n"\
                              "D=M\n"\
                              "@%s\n"\
                              "M=D\n"\
-                             "@%s\n"\
-                             "D=M\n"\
-                             "@SP\n"\
-                             "A=M\n"\
-                             "M=D\n"\
+				"@%s\n"\
+                                "AM=M-1\n"\
+                                "D=M\n"\
+                                "@%s\n"\
+                                "M=D\n"\
+				"@%s\n"\
+                                "AM=M-1\n"\
+                                "D=M\n"\
+                                "@%s\n"\
+                                "M=D\n"\
+				"@%s\n"\
+                                "AM=M-1\n"\
+                                "D=M\n"\
+                                "@%s\n"\
+                                "M=D\n"\
                              "@%s\n"\
                              "A=M\n"\
                              "0;JMP\n"
-	fprintf(writer->output,WRITE_RETURN,XSTR(GEN_2),XSTR(GEN_1),XSTR(GEN_2));
+
+	fprintf(writer->output,RESTORE_STATE,XSTR(GEN_3),XSTR(THAT_BASE),XSTR(GEN_3),XSTR(THIS_BASE),XSTR(GEN_3),XSTR(ARG_BASE),XSTR(GEN_3),XSTR(LOCAL_BASE),XSTR(GEN_2));
 }

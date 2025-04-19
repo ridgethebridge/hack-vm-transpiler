@@ -12,8 +12,11 @@
 #define THIS_BASE THIS
 #define THAT_BASE THAT
 #define TEMP_BASE 5
-#define GEN_1 13
+// GEN_1 is used for pop operations
+#define GEN_1 13 
+// GEN_2 stores the return address
 #define GEN_2 14
+// GEN_3 stores the start of stack frame
 #define GEN_3 15
 #define XSTR(X) STR(X)
 #define STR(X) #X

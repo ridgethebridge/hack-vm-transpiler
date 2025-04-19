@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 		else if(ins == VM_FUNCTION)
 		{
 			String_Snap function_name = vm_get_word(parser);
-			String_Snap num_locals = vm_get_word(parser);
+			String_Snap locals_snap = vm_get_word(parser);
 			if(ss_has_next(parser->line_scanner))
 			{
 				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
@@ -138,7 +138,8 @@ int main(int argc, char **argv)
 				return 1;
 			}
 			last_function = function_name;
-			vm_write_function(writer,function_name);
+			uint16 num_locals = vm_index_to_uint16(locals_snap);
+			vm_write_function(writer,function_name,num_locals);
 		}
 		else if(ins == VM_CALL)
 		{
