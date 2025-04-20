@@ -10,23 +10,23 @@ VM_Instruction vm_instruction_type(String_Snap ins)
 	if(ss_are_equal(ins,SS("pop")) )
 		return VM_POP;
 	if(ss_are_equal(ins,SS("add")) )
-		return VM_ARITHMETIC;
+		return VM_ADD;
 	if(ss_are_equal(ins,SS("sub")) )
-		return VM_ARITHMETIC;
+		return VM_SUB;
 	if(ss_are_equal(ins,SS("neg")) )
-		return VM_ARITHMETIC;
+		return VM_NEG;
 	if(ss_are_equal(ins,SS("eq")) )
-		return VM_ARITHMETIC;
+		return VM_EQ;
 	if(ss_are_equal(ins,SS("gt")))
-		return VM_ARITHMETIC;
+		return VM_GT;
 	if(ss_are_equal(ins,SS("lt")) )
-		return VM_ARITHMETIC;
+		return VM_LT;
 	if(ss_are_equal(ins,SS("and")) )
-		return VM_ARITHMETIC;
+		return VM_AND;
 	if(ss_are_equal(ins,SS("or")) )
-		return VM_ARITHMETIC;
+		return VM_OR;
 	if(ss_are_equal(ins,SS("not")) )
-		return VM_ARITHMETIC;
+		return VM_NOT;
 	if(ss_are_equal(ins,SS("label")))
 		return VM_LABEL;
 	if(ss_are_equal(ins,SS("function")))
@@ -82,16 +82,24 @@ bool vm_has_next(VM_Parser * parser)
 
 
 // returns empty snap with null on eol
- String_Snap vm_get_word(VM_Parser *parser)
+ VM_Instruction vm_read_instruction(VM_Parser *parser)
 {
 	if(!ss_has_next(parser->line_scanner))
 	{
-		return (String_Snap) {
-					.data = 0,
-					.length = 0
-				};
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"end of line reached when instruction expected\n");
+		exit(1);
 	}
-	return ss_next_word(&(parser->line_scanner));
+	String_Snap ins =  ss_next_word(&(parser->line_scanner));
+	VM_Instruction result = vm_instruction_type(ins);
+	if(result == VM_INVALID_INSTRUCTION)
+	{
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"invalid instruction %.*s\n",ins.length,ins.data);
+		exit(1);
+	}
+	printf("%.*s\n",ins);
+	return result;
 }
 
 void vm_skip_blanks(VM_Parser *parser)
@@ -184,26 +192,56 @@ void vm_free_parser(VM_Parser *parser)
 	free(parser);
 }
 
-VM_Op vm_op_type(String_Snap op)
+
+VM_Segment vm_read_segment(VM_Parser *parser)
 {
-	if(ss_are_equal(op,SS("add")))
-		return VM_ADD;
-	if(ss_are_equal(op,SS("sub")))
-		return VM_SUB;
-	if(ss_are_equal(op,SS("and")))
-		return VM_AND;
-	if(ss_are_equal(op,SS("or")))
-		return VM_OR;
-	if(ss_are_equal(op,SS("eq")))
-		return VM_EQ;
-	if(ss_are_equal(op,SS("lt")))
-		return VM_LT;
-	if(ss_are_equal(op,SS("gt")))
-		return VM_GT;
-	if(ss_are_equal(op,SS("not")))
-		return VM_NOT;
-	if(ss_are_equal(op,SS("neg")))
-		return VM_NEG;
-	return VM_INVALID_OP;
+
+	if(!ss_has_next(parser->line_scanner))
+	{
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"end of line reached when segment expected\n");
+		exit(1);
+	}
+	String_Snap segment = ss_next_word(&(parser->line_scanner));
+	VM_Segment result = vm_segment_type(segment);
+
+	if(result == VM_INVALID_SEGMENT)
+	{
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"invalid segment %.*s\n",segment.length,segment.data);
+		exit(1);
+	}
+	printf("%.*s\n",segment);
+	return result;
 }
 
+uint16 vm_read_index(VM_Parser *parser)
+{
+	if(!ss_has_next(parser->line_scanner))
+	{
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"end of line reached when index expected\n");
+		exit(1);
+	}
+	String_Snap index = ss_next_word(&(parser->line_scanner));
+	VM_Segment result = vm_index_to_uint16(index);
+	printf("%hu\n",result);
+	return result;
+}
+
+String_Snap vm_get_name(VM_Parser *parser)
+{
+	if(!ss_has_next(parser->line_scanner))
+	{
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"end of line reached when function name expected\n");
+		exit(1);
+	}
+	String_Snap name = ss_next_word(&(parser->line_scanner));
+	if(name.data[0] >= '0' && name.data[0] <='9')
+	{
+		fprintf(stderr,"inavliad function name, has a digit at the start\n");
+		exit(1);
+	}
+	return name;
+}

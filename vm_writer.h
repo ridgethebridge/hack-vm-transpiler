@@ -12,7 +12,7 @@ typedef struct VM_Writer {
 
 void vm_write_push(VM_Writer *writer, VM_Segment segment, uint16 index);
 void vm_write_pop(VM_Writer *writer, VM_Segment segment, uint16 index);
-void vm_write_arithmetic(VM_Writer *writer, VM_Op command);
+void vm_write_arithmetic(VM_Writer *writer, VM_Instruction ins);
 VM_Writer *vm_create_writer(char *file);
 void vm_free_writer(VM_Writer *writer);
 void vm_write_label(VM_Writer *writer, String_Snap label, String_Snap function);

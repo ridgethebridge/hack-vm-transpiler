@@ -126,10 +126,10 @@ void vm_write_push(VM_Writer *writer, VM_Segment segment, uint16 index)
 }
 
 // optimize this
-void vm_write_arithmetic(VM_Writer *writer,VM_Op command)
+void vm_write_arithmetic(VM_Writer *writer,VM_Instruction ins)
 {
-	char *op = op_list[command];
-	switch(command)
+	char *op = op_list[ins];
+	switch(ins)
 	{
 		case VM_ADD:
 		case VM_SUB:

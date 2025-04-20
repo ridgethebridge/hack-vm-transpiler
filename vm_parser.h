@@ -31,9 +31,17 @@ typedef struct VM_Parser {
 } VM_Parser;
 
 typedef enum VM_Instruction {
-	VM_PUSH = 0,
+	VM_ADD=0,
+	VM_SUB,
+	VM_EQ,
+	VM_GT,
+	VM_LT,
+	VM_AND,
+	VM_OR,
+	VM_NOT,
+	VM_NEG,
+	VM_PUSH,
 	VM_POP,
-	VM_ARITHMETIC,
 	VM_LABEL,
 	VM_FUNCTION,
 	VM_CALL,
@@ -55,26 +63,16 @@ typedef enum VM_Segment {
 	VM_INVALID_SEGMENT
 }VM_Segment;
 
-typedef enum VM_Op{
-	VM_ADD= 0,
-	VM_SUB,
-	VM_EQ,
-	VM_GT,
-	VM_LT,
-	VM_AND,
-	VM_OR,
-	VM_NOT,
-	VM_NEG,
-	VM_INVALID_OP
-} VM_Op;
-
 VM_Parser* vm_create_parser(char *file);
 
 VM_Instruction vm_instruction_type(String_Snap ins);
+String_Snap vm_get_name(VM_Parser *parser);
 
 VM_Segment vm_segment_type(String_Snap segment);
 
-String_Snap vm_get_word(VM_Parser *parser);
+VM_Instruction vm_read_instruction(VM_Parser *parser);
+VM_Segment vm_read_segment(VM_Parser *parser);
+uint16 vm_read_index(VM_Parser *parser);
 
 
 bool vm_has_next();
@@ -86,6 +84,4 @@ String_Snap vm_read_line(VM_Parser *parser);
 void vm_free_parser(VM_Parser *parser);
 uint16 vm_index_to_uint16(String_Snap index);
 void vm_free_parser(VM_Parser *parser);
-VM_Op vm_op_type(String_Snap op);
-
 #endif
