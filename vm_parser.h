@@ -4,14 +4,13 @@
 #include<stdbool.h>
 #include"libs/string_snap.h"
 
-
 #define STATIC_BASE 16
-#define STACK_BASE SP
-#define LOCAL_BASE LCL
-#define ARG_BASE ARG
-#define THIS_BASE THIS
-#define THAT_BASE THAT
-#define TEMP_BASE 5
+#define SP_REG SP
+#define LCL_REG LCL
+#define ARG_REG ARG
+#define THIS_REG THIS
+#define THAT_REG THAT
+#define TEMP_REG 5
 // GEN_1 is used for pop operations
 #define GEN_1 13 
 // GEN_2 stores the return address
@@ -53,13 +52,15 @@ typedef enum VM_Instruction {
 
 typedef enum VM_Segment {
 	VM_STATIC = 0,
-	VM_LOCAL,
-	VM_ARGUMENT,
+	VM_LCL,
+	VM_ARG,
 	VM_THIS,
 	VM_THAT,
 	VM_POINTER,
 	VM_TEMP,
 	VM_CONSTANT,
+	VM_LCL_NO_DEREF,
+	VM_ARG_NO_DEREF,
 	VM_INVALID_SEGMENT
 }VM_Segment;
 
@@ -83,5 +84,4 @@ String_Snap vm_read_line(VM_Parser *parser);
 
 void vm_free_parser(VM_Parser *parser);
 uint16 vm_index_to_uint16(String_Snap index);
-void vm_free_parser(VM_Parser *parser);
 #endif

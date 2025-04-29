@@ -6,6 +6,7 @@
 
 typedef struct VM_Writer {
 	char *file_name;
+	char *cur_input_file;
 	FILE *output;
 } VM_Writer;
 

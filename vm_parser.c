@@ -67,8 +67,9 @@ VM_Parser* vm_create_parser(char *file_name)
 	strcpy(code+pos,line_buf);
 	pos+=line_length;
 	}
-	code = realloc(code,pos);
-	parser->code = ss_from_cstr(code);
+	code = realloc(code,pos+1);
+	parser->code.data = code;
+	parser->code.length = pos;
 	parser->cursor = 0;
 	parser->line_num = 0;
 	fclose(file);
@@ -86,7 +87,7 @@ bool vm_has_next(VM_Parser * parser)
 {
 	if(!ss_has_next(parser->line_scanner))
 	{
-		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"error on line %lu in file %s\n",parser->line_num,parser->file_name);
 		fprintf(stderr,"end of line reached when instruction expected\n");
 		exit(1);
 	}
@@ -98,7 +99,6 @@ bool vm_has_next(VM_Parser * parser)
 		fprintf(stderr,"invalid instruction %.*s\n",ins.length,ins.data);
 		exit(1);
 	}
-	printf("%.*s\n",ins);
 	return result;
 }
 
@@ -138,11 +138,15 @@ void vm_skip_blanks(VM_Parser *parser)
 
 String_Snap vm_read_line(VM_Parser *parser)
 {
-	vm_skip_blanks(parser);
+	if(!vm_has_next(parser))
+	{
+		fprintf(stderr,"attempting to read line when the EOL has been reached\n");
+		exit(1);
+	}
 	String_Snap line = ss_delim_cstr(parser->code.data+parser->cursor,'\n');
 	parser->cursor+=line.length+1;
-	line = ss_trim(line);
 	line = ss_strdelim(line,SS("//"));
+	line = ss_trim(line);
 	parser->line_scanner = ss_create_scanner(line);
 	return parser->line_scanner.snap;
 }
@@ -154,9 +158,9 @@ VM_Segment vm_segment_type(String_Snap segment)
 	if(ss_are_equal(segment,SS("static")))
 		return VM_STATIC;
 	if(ss_are_equal(segment,SS("local")))
-		return VM_LOCAL;
+		return VM_LCL;
 	if(ss_are_equal(segment,SS("argument")))
-		return VM_ARGUMENT;
+		return VM_ARG;
 	if(ss_are_equal(segment,SS("pointer")))
 		return VM_POINTER;
 	if(ss_are_equal(segment,SS("this")))
@@ -211,7 +215,6 @@ VM_Segment vm_read_segment(VM_Parser *parser)
 		fprintf(stderr,"invalid segment %.*s\n",segment.length,segment.data);
 		exit(1);
 	}
-	printf("%.*s\n",segment);
 	return result;
 }
 
@@ -225,7 +228,6 @@ uint16 vm_read_index(VM_Parser *parser)
 	}
 	String_Snap index = ss_next_word(&(parser->line_scanner));
 	VM_Segment result = vm_index_to_uint16(index);
-	printf("%hu\n",result);
 	return result;
 }
 

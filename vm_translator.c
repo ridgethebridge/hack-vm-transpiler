@@ -37,10 +37,15 @@ int main(int argc, char **argv)
 	{
 		shift(&argc,&argv);
 	VM_Parser *parser = vm_create_parser(argv[0]);
+	writer->cur_input_file = parser->file_name;
 	// to be used for labels
 
 	while(vm_has_next(parser))
 	{
+		vm_skip_blanks(parser);
+		if(!vm_has_next(parser))
+			break;
+
 		vm_read_line(parser);
 	 	VM_Instruction ins = vm_read_instruction(parser);
 		switch(ins)
@@ -74,7 +79,7 @@ int main(int argc, char **argv)
 				return ARITHMETIC_ERROR;
 			}
 			vm_write_arithmetic(writer,ins);
-				}
+				}break;
 
 			case VM_POP: 
 				{
@@ -114,7 +119,7 @@ int main(int argc, char **argv)
 						return OVERFLOW_ERROR;
 					}
 					vm_write_call(writer,function_name,num_args);
-				}
+				}break;
 
 			case VM_LABEL:
 				{
@@ -128,7 +133,7 @@ int main(int argc, char **argv)
 						last_function = SS("null");
 
 					vm_write_label(writer,label_name,last_function);
-				}
+				}break;
 		
 			case VM_GOTO:
 				{
@@ -139,7 +144,7 @@ int main(int argc, char **argv)
 						return 1;
 					}
 					vm_write_goto(writer,label,last_function);
-				}
+				}break;
 			case VM_IF:
 				{
 					String_Snap label  = vm_get_name(parser);
@@ -149,7 +154,7 @@ int main(int argc, char **argv)
 						return 1;
 					}
 					vm_write_if(writer,label,last_function);
-				}
+				}break;
 			case VM_RETURN:
 				{
 					if(ss_has_next(parser->line_scanner))
@@ -160,7 +165,7 @@ int main(int argc, char **argv)
 					vm_write_return(writer);
 					last_function = SS("null");
 
-				}
+				}break;
 			
 		}
 	}
