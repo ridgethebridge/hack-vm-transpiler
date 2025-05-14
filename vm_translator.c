@@ -1,11 +1,16 @@
 #include"vm_writer.h"
 #include<string.h>
+#include<stdlib.h>
 
 #define INPUT_ERROR 1
 #define ARITHMETIC_ERROR 2
 #define INVALID_INDEX 3
 #define INVALID_SEGMENT 4
 #define OVERFLOW_ERROR 5
+
+
+
+	
 void usage()
 {
 printf("VMtranslator - transpiles hack VM code into hack assembly code\n");
@@ -32,7 +37,7 @@ int main(int argc, char **argv)
 
 
 	VM_Writer *writer = vm_create_writer("output.asm");
-	String_Snap last_function = {0,0};
+	String_Snap cur_function;
 	while(argc > 1) 
 	{
 		shift(&argc,&argv);
@@ -104,7 +109,7 @@ int main(int argc, char **argv)
 						fprintf(stderr," excess arguments %.*s passed to binary operator function",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
 						return OVERFLOW_ERROR;
 					}
-					last_function = function_name;
+					cur_function = function_name;
 					vm_write_function(writer,function_name,num_locals);
 				}break;
 			case VM_CALL:
@@ -129,10 +134,7 @@ int main(int argc, char **argv)
 						fprintf(stderr,"too much stuff for label!\n");
 						return 1;
 					}
-					if(!last_function.data)
-						last_function = SS("null");
-
-					vm_write_label(writer,label_name,last_function);
+					vm_write_label(writer,label_name,cur_function);
 				}break;
 		
 			case VM_GOTO:
@@ -143,7 +145,7 @@ int main(int argc, char **argv)
 						fprintf(stderr,"too much stuff for goto!\n");
 						return 1;
 					}
-					vm_write_goto(writer,label,last_function);
+					vm_write_goto(writer,label,cur_function);
 				}break;
 			case VM_IF:
 				{
@@ -153,7 +155,7 @@ int main(int argc, char **argv)
 						fprintf(stderr,"too much stuff for if!\n");
 						return 1;
 					}
-					vm_write_if(writer,label,last_function);
+					vm_write_if(writer,label,cur_function);
 				}break;
 			case VM_RETURN:
 				{
@@ -163,10 +165,7 @@ int main(int argc, char **argv)
 						return 1;
 					}
 					vm_write_return(writer);
-					last_function = SS("null");
-
 				}break;
-			
 		}
 	}
 	vm_free_parser(parser);

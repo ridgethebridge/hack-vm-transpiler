@@ -28,7 +28,8 @@
 				.snap = {
 					.data = str.data,
 					.length = str.length
-				}
+				},
+				.chars_read = 0
 				};
 }
 	
@@ -100,8 +101,11 @@ String_Snap ss_strdelim(String_Snap str, String_Snap delim)
 
 }
 
+//TODO make less confusing
  String_Snap ss_next_word(Snap_Scanner *scan)
 {
+	String_Snap left_trim = ss_trim_left(scan->snap);
+	scan->chars_read += left_trim.length - scan->snap.length;
 	scan->snap = ss_trim(scan->snap);
 	uint64 index = 0;
 	while(index < scan->snap.length && !(ss_isspace(scan->snap.data[index])))
@@ -112,6 +116,7 @@ String_Snap ss_strdelim(String_Snap str, String_Snap delim)
 				};
 	scan->snap.data +=index+1;
 	scan->snap.length -=index;
+	scan->chars_read+=index+1;
 return result;
 }
 

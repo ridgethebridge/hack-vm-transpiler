@@ -4,7 +4,7 @@
 #include<stdbool.h>
 #include"libs/string_snap.h"
 
-#define STATIC_BASE 16
+// TODO remove static base
 #define SP_REG SP
 #define LCL_REG LCL
 #define ARG_REG ARG
@@ -51,8 +51,7 @@ typedef enum VM_Instruction {
 } VM_Instruction;
 
 typedef enum VM_Segment {
-	VM_STATIC = 0,
-	VM_LCL,
+	VM_LCL=0,
 	VM_ARG,
 	VM_THIS,
 	VM_THAT,
@@ -61,6 +60,7 @@ typedef enum VM_Segment {
 	VM_CONSTANT,
 	VM_LCL_NO_DEREF,
 	VM_ARG_NO_DEREF,
+	VM_STATIC,
 	VM_INVALID_SEGMENT
 }VM_Segment;
 

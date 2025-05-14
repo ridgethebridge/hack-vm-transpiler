@@ -22,6 +22,7 @@ typedef struct String_Snap {
 
 typedef struct Snap_Scanner {
 	String_Snap snap;
+	uint64 chars_read;
 } Snap_Scanner;
 
 

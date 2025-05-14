@@ -72,6 +72,7 @@ VM_Parser* vm_create_parser(char *file_name)
 	parser->code.length = pos;
 	parser->cursor = 0;
 	parser->line_num = 0;
+	parser->line_scanner.chars_read = 0;
 	fclose(file);
 	return parser;
 }
@@ -87,7 +88,7 @@ bool vm_has_next(VM_Parser * parser)
 {
 	if(!ss_has_next(parser->line_scanner))
 	{
-		fprintf(stderr,"error on line %lu in file %s\n",parser->line_num,parser->file_name);
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
 		fprintf(stderr,"end of line reached when instruction expected\n");
 		exit(1);
 	}
@@ -95,7 +96,8 @@ bool vm_has_next(VM_Parser * parser)
 	VM_Instruction result = vm_instruction_type(ins);
 	if(result == VM_INVALID_INSTRUCTION)
 	{
-		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
+		fprintf(stderr,"in statement %.*s\n",parser->line_scanner.snap.data-parser->line_scanner.chars_read);
 		fprintf(stderr,"invalid instruction %.*s\n",ins.length,ins.data);
 		exit(1);
 	}
@@ -140,6 +142,7 @@ String_Snap vm_read_line(VM_Parser *parser)
 {
 	if(!vm_has_next(parser))
 	{
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
 		fprintf(stderr,"attempting to read line when the EOL has been reached\n");
 		exit(1);
 	}
@@ -148,6 +151,7 @@ String_Snap vm_read_line(VM_Parser *parser)
 	line = ss_strdelim(line,SS("//"));
 	line = ss_trim(line);
 	parser->line_scanner = ss_create_scanner(line);
+	parser->line_num+=1;
 	return parser->line_scanner.snap;
 }
 
@@ -202,7 +206,8 @@ VM_Segment vm_read_segment(VM_Parser *parser)
 
 	if(!ss_has_next(parser->line_scanner))
 	{
-		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
+		fprintf(stderr,"in statement %.*s\n",parser->line_scanner.snap.data-parser->line_scanner.chars_read);
 		fprintf(stderr,"end of line reached when segment expected\n");
 		exit(1);
 	}
@@ -211,7 +216,8 @@ VM_Segment vm_read_segment(VM_Parser *parser)
 
 	if(result == VM_INVALID_SEGMENT)
 	{
-		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
+		fprintf(stderr,"in statement %.*s\n",parser->line_scanner.snap.data-parser->line_scanner.chars_read);
 		fprintf(stderr,"invalid segment %.*s\n",segment.length,segment.data);
 		exit(1);
 	}
@@ -222,7 +228,8 @@ uint16 vm_read_index(VM_Parser *parser)
 {
 	if(!ss_has_next(parser->line_scanner))
 	{
-		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
+		fprintf(stderr,"in statement %.*s\n",parser->line_scanner.snap.data-parser->line_scanner.chars_read);
 		fprintf(stderr,"end of line reached when index expected\n");
 		exit(1);
 	}
@@ -235,14 +242,17 @@ String_Snap vm_get_name(VM_Parser *parser)
 {
 	if(!ss_has_next(parser->line_scanner))
 	{
-		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->cursor,parser->file_name);
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
+		fprintf(stderr,"in statement %.*s\n",parser->line_scanner.snap.data-parser->line_scanner.chars_read);
 		fprintf(stderr,"end of line reached when function name expected\n");
 		exit(1);
 	}
 	String_Snap name = ss_next_word(&(parser->line_scanner));
 	if(name.data[0] >= '0' && name.data[0] <='9')
 	{
-		fprintf(stderr,"inavliad function name, has a digit at the start\n");
+		fprintf(stderr,"error on line %lu:%lu in file %s\n",parser->line_num,parser->line_scanner.chars_read,parser->file_name);
+		fprintf(stderr,"in statement %.*s\n",parser->line_scanner.snap.data-parser->line_scanner.chars_read);
+		fprintf(stderr,"invalid function name %.*s, has a digit at the start\n",name.length,name.data);
 		exit(1);
 	}
 	return name;
