@@ -36,7 +36,8 @@ int main(int argc, char **argv)
 	}
 
 
-	VM_Writer *writer = vm_create_writer("output.asm");
+	VM_Writer *writer = vm_create_writer();
+	writer->file_name = "output.asm";
 	String_Snap cur_function;
 	while(argc > 1) 
 	{
@@ -170,6 +171,7 @@ int main(int argc, char **argv)
 	}
 	vm_free_parser(parser);
 	}
+	vm_output_to_file(writer);
 	vm_free_writer(writer);
 	return 0;
 }

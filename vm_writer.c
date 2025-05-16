@@ -3,6 +3,7 @@
 #include<stdlib.h>
 #include"arithmetic.h"
 #include"push.h"
+#include"pop.h"
 #include<stdarg.h>
 
 // counter for labels, used for comparison commands
@@ -10,7 +11,6 @@ static uint64 cond_counter = 0;
 static uint64 return_counter = 0;
 
 // list of strings containing segment names, accessed with enum values
-// TODO get rid of segment list and segment_base
 static char segment_list[][5]= {
 	"LCL","ARG","THIS",
 	"THAT","THIS","5","SP",
@@ -26,12 +26,14 @@ void vm_write(VM_Writer *writer,const char *str,...)
 {
 	va_list args;
 	va_start(args,str);
-	if(writer->pos >= writer->buffer_size)
+	char temp[4096];
+	vsprintf(temp,str,args);
+	if(writer->pos + strlen(temp) >= writer->buffer_size)
 	{
-		writer->buffer_size *=2;
+		writer->buffer_size = writer->buffer_size*2 + strlen(temp);
 		writer->output = realloc(writer->output,writer->buffer_size);
 	}
-	vsprintf(writer->output+writer->pos,str,args);
+	strcpy(writer->output+writer->pos,temp);
 	writer->pos=strlen(writer->output);
 	va_end(args);
 }
@@ -57,7 +59,7 @@ VM_Writer *vm_create_writer()
 
 void vm_free_writer(VM_Writer *writer)
 {
-	free(writer->file_name);
+	//free(writer->file_name);
 	free(writer->output);
 	free(writer);
 }
@@ -104,49 +106,28 @@ void vm_write_arithmetic(VM_Writer *writer,VM_Instruction ins)
 
 void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 {
-	vm_write(writer,"// pop\n");
-	#define POP_INIT "@%hu\n"\
-			 "D=A\n"\
-			 "@%s\n"
-
-	#define WRITE_POP  "D=A\n"\
-                           "@%\n"\
-                           "M=D\n"\
-                           "@SP\n"\
-                           "M=M-1\n"\
-                           "A=M\n"\
-                           "D=M\n"\
-                           "@%s\n"\
-                           "A=M\n"\
-                           "M=D\n"
-
 	char *segment_base = segment_list[segment]; // gets segment string
 
 	switch(segment)
 	{
 		case VM_CONSTANT:
-			vm_write(stderr,"cant pop into constant memory segment\n");
-			vm_write(stderr,"%d\n",segment);
+			fprintf(stderr,"cant pop into constant memory segment\n");
+			fprintf(stderr,"%d\n",segment);
 			exit(1);
 			return;
 		case VM_STATIC:
-			vm_write(writer,"@%s.%hu\n" WRITE_POP,writer->cur_input_file,index,XSTR(GEN_1),XSTR(GEN_1));
+			vm_write(writer,POP_STATIC,writer->cur_input_file,index);
 			return;
 		case VM_THIS:
 		case VM_THAT:
 		case VM_ARG:
 		case VM_LCL:
-			vm_write(writer,POP_INIT "A=M\n",index,segment_base);
-			vm_write(writer,"A=D+A\n");
+			vm_write(writer,POP_POINTER,index,segment_base);
 			break;
 		default:
-			vm_write(writer,POP_INIT "A=D+A\n",index,segment_base);
+			vm_write(writer,POP_REG,index,segment_base);
 			break;
 	}
-		// all do this routine
-
-	vm_write(writer,WRITE_POP,XSTR(GEN_1),XSTR(GEN_1));
-
 }
 
 //works
@@ -282,4 +263,11 @@ void vm_write_return(VM_Writer *writer)
                              "0;JMP\n"
 
 	vm_write(writer,RESTORE_STATE);
+}
+
+void vm_output_to_file(VM_Writer *writer)
+{
+	FILE* file = fopen(writer->file_name,"w");
+	fprintf(file,writer->output);
+	fclose(file);
 }
