@@ -1,6 +1,6 @@
 
-#include"vm_writer.h"
 #include<stdlib.h>
+#include"vm_writer.h"
 #include"arithmetic.h"
 #include"push.h"
 #include"pop.h"

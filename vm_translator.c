@@ -1,16 +1,25 @@
 #include"vm_writer.h"
 #include<string.h>
+#include<dirent.h>
 #include<stdlib.h>
-
+#include<stdbool.h>
 #define INPUT_ERROR 1
 #define ARITHMETIC_ERROR 2
 #define INVALID_INDEX 3
 #define INVALID_SEGMENT 4
 #define OVERFLOW_ERROR 5
+typedef enum Flag {
+	OUTPUT_FLAG = 0,
+	NOT_FLAG
+}Flag;
 
+Flag flag_type(char *input)
+{
+	if(strcmp(input,"-o") == 0)
+		return OUTPUT_FLAG;
+	return NOT_FLAG;
+}
 
-
-	
 void usage()
 {
 printf("VMtranslator - transpiles hack VM code into hack assembly code\n");
@@ -24,28 +33,10 @@ int shift(int *argc, char ***argv)
 	*argc-=1;
 	*argv+=1;
 }
-
-int main(int argc, char **argv)
+int vm_translate(VM_Writer *writer, VM_Parser *parser)
 {
-	char *output_name;
-	if(argc < 2)
-	{
-		fprintf(stderr,"need to put vm source files\n");
-		usage();
-		return INPUT_ERROR;
-	}
-
-
-	VM_Writer *writer = vm_create_writer();
-	writer->file_name = "output.asm";
-	String_Snap cur_function;
-	while(argc > 1) 
-	{
-		shift(&argc,&argv);
-	VM_Parser *parser = vm_create_parser(argv[0]);
 	writer->cur_input_file = parser->file_name;
-	// to be used for labels
-
+	String_Snap cur_function;
 	while(vm_has_next(parser))
 	{
 		vm_skip_blanks(parser);
@@ -53,7 +44,7 @@ int main(int argc, char **argv)
 			break;
 
 		vm_read_line(parser);
-	 	VM_Instruction ins = vm_read_instruction(parser);
+		VM_Instruction ins = vm_read_instruction(parser);
 		switch(ins)
 		{
 			case VM_PUSH: 
@@ -170,6 +161,81 @@ int main(int argc, char **argv)
 		}
 	}
 	vm_free_parser(parser);
+}
+
+int main(int argc, char **argv)
+{
+	bool dir_given = false;
+	bool file_given = false;
+	char *output_name;
+	char buf[512];
+	if(argc < 2)
+	{
+		fprintf(stderr,"need to put vm source files or directory\n");
+		usage();
+		return INPUT_ERROR;
+	}
+
+
+	VM_Writer *writer = vm_create_writer();
+	writer->file_name = "output.asm";
+	VM_Parser *parser;
+	while(argc > 1) 
+	{
+		shift(&argc,&argv);
+		Flag flag = flag_type(argv[0]);
+		if( flag == OUTPUT_FLAG)
+		{
+			writer->file_name = argv[0];
+			continue;
+		}
+	DIR *dir = opendir(argv[0]);
+	if(dir)
+	{
+		if(file_given)
+		{
+			fprintf(stderr,"can only supply a list of files, or a directory but not both\n");
+			return 9;
+		}
+		if(dir_given)
+		{
+			fprintf(stderr,"directory was supplied more than once, it can only be given once\n");
+			return 9;
+		}
+		dir_given = true;
+		struct dirent *entry;
+		while((entry = readdir(dir)))
+		{
+			if(strstr(entry->d_name,".vm"))
+			{
+				snprintf(buf,sizeof(buf),"%s/%s",argv[0],entry->d_name);
+				parser = vm_create_parser(buf);
+				if(!parser)
+				{
+					fprintf(stderr,"could not open file %s for reading\n",buf);
+					return 1;
+				}
+			vm_translate(writer,parser);
+			}
+			else continue;
+		}
+	}
+	else 
+	{
+		if(dir_given)
+		{
+			fprintf(stderr,"can only supply a list of files, or a directory but not both\n");
+			return 9;
+		}
+		parser = vm_create_parser(argv[0]);
+		if(!parser)
+		{
+			fprintf(stderr,"could not open file %s for reading\n",argv[0]);
+			return 1;
+		}
+		vm_translate(writer,parser);
+		file_given = true;
+	}
 	}
 	vm_output_to_file(writer);
 	vm_free_writer(writer);
