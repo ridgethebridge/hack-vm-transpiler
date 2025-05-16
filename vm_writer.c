@@ -3,6 +3,7 @@
 #include<stdlib.h>
 #include"arithmetic.h"
 #include"push.h"
+#include<stdarg.h>
 
 // counter for labels, used for comparison commands
 static uint64 cond_counter = 0;
@@ -11,9 +12,9 @@ static uint64 return_counter = 0;
 // list of strings containing segment names, accessed with enum values
 // TODO get rid of segment list and segment_base
 static char segment_list[][5]= {
-	XSTR(LCL_REG),XSTR(ARG_REG),XSTR(THIS_REG),
-	XSTR(THAT_REG),XSTR(THIS_REG),XSTR(TEMP_REG),XSTR(SP_REG),
-	XSTR(LCL_REG),XSTR(ARG_REG)
+	"LCL","ARG","THIS",
+	"THAT","THIS","5","SP",
+	"LCL","ARG"
 	};
 // list of oeprations, accessed with enums
 static char op_list[][256] = {
@@ -21,23 +22,35 @@ static char op_list[][256] = {
 	OR_OP,NOT_OP,NEG_OP
 };
 
-VM_Writer *vm_create_writer(char *file)
+void vm_write(VM_Writer *writer,const char *str,...)
 {
-	FILE *output = fopen(file,"w");
-	if(!output)
-		return NULL;
+	va_list args;
+	va_start(args,str);
+	if(writer->pos >= writer->buffer_size)
+	{
+		writer->buffer_size *=2;
+		writer->output = realloc(writer->output,writer->buffer_size);
+	}
+	vsprintf(writer->output+writer->pos,str,args);
+	writer->pos=strlen(writer->output);
+	va_end(args);
+}
+VM_Writer *vm_create_writer()
+{
+	#define INITIAL_OUTPUT_SIZE 1024
 	VM_Writer *writer = malloc(sizeof(VM_Writer));
-	writer->file_name = malloc(strlen(file)+1);
 	writer->cur_input_file = NULL;
-	strcpy(writer->file_name,file);
-	writer->output=output;
+	writer->file_name = NULL;
+	writer->output = malloc(INITIAL_OUTPUT_SIZE);
+	writer->pos = 0;
+	writer->buffer_size = INITIAL_OUTPUT_SIZE;
 	// sets the stack up
 	#define SP_INIT "@256\n"\
 			   "D=A\n"\
-			   "@%s\n"\
+			   "@SP\n"\
 			   "M=D\n"
-	fprintf(writer->output,"// Bootstrap\n");
-	fprintf(writer->output,SP_INIT,XSTR(SP_REG));
+	vm_write(writer,"// Bootstrap\n");
+	vm_write(writer,SP_INIT);
 	vm_write_call(writer,SS("Sys.init"),0);
 	return writer;
 }
@@ -45,7 +58,7 @@ VM_Writer *vm_create_writer(char *file)
 void vm_free_writer(VM_Writer *writer)
 {
 	free(writer->file_name);
-	fclose(writer->output);
+	free(writer->output);
 	free(writer);
 }
 
@@ -56,19 +69,19 @@ void vm_write_push(VM_Writer *writer, VM_Segment segment, uint16 index)
 	switch(segment)
 	{
 		case VM_STATIC:
-			fprintf(writer->output,PUSH_STATIC,writer->cur_input_file,index);
+			vm_write(writer,PUSH_STATIC,writer->cur_input_file,index);
 			break;
 		case VM_CONSTANT:
-			fprintf(writer->output,PUSH_CONSTANT,index,segment_base);
+			vm_write(writer,PUSH_CONSTANT,index,segment_base);
 			break;
 		case VM_THIS:
 		case VM_THAT:
 		case VM_ARG:
 		case VM_LCL:
-			fprintf(writer->output,PUSH_POINTER,index,segment_base);
+			vm_write(writer,PUSH_POINTER,index,segment_base);
 			break;
 		default:
-			fprintf(writer->output,PUSH_REG,index,segment_base);
+			vm_write(writer,PUSH_REG,index,segment_base);
 	}
 }
 
@@ -80,24 +93,24 @@ void vm_write_arithmetic(VM_Writer *writer,VM_Instruction ins)
 		case VM_LT:
 		case VM_GT:
 		case VM_EQ:
-			fprintf(writer->output,op,cond_counter,cond_counter,cond_counter);
+			vm_write(writer,op,cond_counter,cond_counter,cond_counter);
 			++cond_counter;
 			break;
 		default:
-			fprintf(writer->output,op);
+			vm_write(writer,op);
 	}
 
 }
 
 void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 {
-	fprintf(writer->output,"// pop\n");
+	vm_write(writer,"// pop\n");
 	#define POP_INIT "@%hu\n"\
 			 "D=A\n"\
 			 "@%s\n"
 
 	#define WRITE_POP  "D=A\n"\
-                           "@%s\n"\
+                           "@%\n"\
                            "M=D\n"\
                            "@SP\n"\
                            "M=M-1\n"\
@@ -112,42 +125,42 @@ void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 	switch(segment)
 	{
 		case VM_CONSTANT:
-			fprintf(stderr,"cant pop into constant memory segment\n");
-			fprintf(stderr,"%d\n",segment);
+			vm_write(stderr,"cant pop into constant memory segment\n");
+			vm_write(stderr,"%d\n",segment);
 			exit(1);
 			return;
 		case VM_STATIC:
-			fprintf(writer->output,"@%s.%hu\n" WRITE_POP,writer->cur_input_file,index,XSTR(GEN_1),XSTR(GEN_1));
+			vm_write(writer,"@%s.%hu\n" WRITE_POP,writer->cur_input_file,index,XSTR(GEN_1),XSTR(GEN_1));
 			return;
 		case VM_THIS:
 		case VM_THAT:
 		case VM_ARG:
 		case VM_LCL:
-			fprintf(writer->output,POP_INIT "A=M\n",index,segment_base);
-			fprintf(writer->output,"A=D+A\n");
+			vm_write(writer,POP_INIT "A=M\n",index,segment_base);
+			vm_write(writer,"A=D+A\n");
 			break;
 		default:
-			fprintf(writer->output,POP_INIT "A=D+A\n",index,segment_base);
+			vm_write(writer,POP_INIT "A=D+A\n",index,segment_base);
 			break;
 	}
 		// all do this routine
 
-	fprintf(writer->output,WRITE_POP,XSTR(GEN_1),XSTR(GEN_1));
+	vm_write(writer,WRITE_POP,XSTR(GEN_1),XSTR(GEN_1));
 
 }
 
 //works
 void vm_write_label(VM_Writer *writer, String_Snap label, String_Snap function)
 {
-	fprintf(writer->output,"// label\n");
-	fprintf(writer->output,"(%.*s$%.*s)\n",function.length,function.data,label.length,label.data);
+	vm_write(writer,"// label\n");
+	vm_write(writer,"(%.*s$%.*s)\n",function.length,function.data,label.length,label.data);
 }
 
 // works
 void vm_write_function(VM_Writer *writer, String_Snap function,uint16 num_locals)
 {
-	fprintf(writer->output,"// function definition\n");
-	fprintf(writer->output,"(%.*s)\n",function.length,function.data);
+	vm_write(writer,"// function definition\n");
+	vm_write(writer,"(%.*s)\n",function.length,function.data);
 	for(uint16 i = 0; i < num_locals; ++i)
 	{
 		vm_write_push(writer,VM_CONSTANT, 0);
@@ -157,15 +170,15 @@ void vm_write_function(VM_Writer *writer, String_Snap function,uint16 num_locals
 //works
 void vm_write_goto(VM_Writer *writer,String_Snap label, String_Snap function)
 {
-	fprintf(writer->output,"// goto\n");
-	fprintf(writer->output,"@%.*s$%.*s\n",function.length,function.data,label.length,label.data);
-	fprintf(writer->output,"0;JMP\n");
+	vm_write(writer,"// goto\n");
+	vm_write(writer,"@%.*s$%.*s\n",function.length,function.data,label.length,label.data);
+	vm_write(writer,"0;JMP\n");
 }
 
 //works
 void vm_write_if(VM_Writer *writer,String_Snap label, String_Snap function)
 {
-	fprintf(writer->output,"// if statement\n");
+	vm_write(writer,"// if statement\n");
 
 	#define IF_OUTPUT "@SP\n"\
 		"AM=M-1\n"\
@@ -173,14 +186,14 @@ void vm_write_if(VM_Writer *writer,String_Snap label, String_Snap function)
 		"@%.*s$%.*s\n"\
 		"D;JNE\n"
 
-	fprintf(writer->output,IF_OUTPUT,function.length,function.data,label.length,label.data);
+	vm_write(writer,IF_OUTPUT,function.length,function.data,label.length,label.data);
 
 }
 
 // works
 void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
 {
-	fprintf(writer->output,"// function call\n");
+	vm_write(writer,"// function call\n");
 	// pushes return address onto stack
 	#define RETURN_PUSH "@return.address.%lu\n"\
                           "D=A\n"\
@@ -190,7 +203,7 @@ void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
                           "@SP\n"\
                           "M=M+1\n"
 	// return push is correct
-	fprintf(writer->output,RETURN_PUSH,return_counter);
+	vm_write(writer,RETURN_PUSH,return_counter);
 
 	// saves registers states
 	// these pushes work
@@ -215,58 +228,58 @@ void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
 			  "@%.*s\n"\
 			  "0;JMP\n"\
 			  "(return.address.%lu)\n"
-	fprintf(writer->output,WRITE_CALL,num_args,function.length,function.data,return_counter);
+	vm_write(writer,WRITE_CALL,num_args,function.length,function.data,return_counter);
 	++return_counter;
 }
 
 // looks like it works
 void vm_write_return(VM_Writer *writer)
 {
-	fprintf(writer->output,"// return statement\n");
+	vm_write(writer,"// return statement\n");
 	#define SAVE_LCL "@LCL\n"\
 			   "D=M\n"\
-			   "@%s\n"\
+			   "@15\n"\
 			   "M=D\n"\
 			   "@5\n"\
 			   "D=A\n"\
 			   "@LCL\n"\
 			   "A=M-D\n"\
 			   "D=M\n"\
-			   "@%s\n"\
+			   "@14\n"\
 			   "M=D\n" // saves return address to gen2
 
-	fprintf(writer->output,SAVE_LCL,XSTR(GEN_3),XSTR(GEN_2));
+	vm_write(writer,SAVE_LCL);
 	vm_write_pop(writer,VM_ARG,0); // pops return value to 1st arg pushed, new top of stack
 	
 	#define STACK_RESTORE "@ARG\n"\
 				"D=M\n"\
 				"@SP\n"\
 				"M=D+1\n"
-	fprintf(writer->output,STACK_RESTORE);
+	vm_write(writer,STACK_RESTORE);
 
-	#define RESTORE_STATE "@%s\n"\
+	#define RESTORE_STATE "@15\n"\
                              "AM=M-1\n"\
                              "D=M\n"\
-                             "@%s\n"\
+                             "@THAT\n"\
                              "M=D\n"\
-				"@%s\n"\
+				"@15\n"\
                                 "AM=M-1\n"\
                                 "D=M\n"\
-                                "@%s\n"\
+                                "@THIS\n"\
                                 "M=D\n"\
-				"@%s\n"\
+				"@15\n"\
                                 "AM=M-1\n"\
                                 "D=M\n"\
-                                "@%s\n"\
+                                "@ARG\n"\
                                 "M=D\n"\
-				"@%s\n"\
+				"@15\n"\
                                 "AM=M-1\n"\
                                 "D=M\n"\
-                                "@%s\n"\
+                                "@LCL\n"\
                                 "M=D\n"\
-                             "@%s\n"\
+                             "@14\n"\
                              "A=M\n"\
                              "0;JMP\n"
 
-	fprintf(writer->output,RESTORE_STATE,XSTR(GEN_3),XSTR(THAT_REG),XSTR(GEN_3),XSTR(THIS_REG),XSTR(GEN_3),XSTR(ARG_REG),XSTR(GEN_3),XSTR(LCL_REG),XSTR(GEN_2));
+	vm_write(writer,RESTORE_STATE);
 }
