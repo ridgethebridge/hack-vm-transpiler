@@ -24,6 +24,6 @@ void vm_write_goto(VM_Writer * writer, String_Snap label,String_Snap function);
 void vm_write_if(VM_Writer * writer, String_Snap label,String_Snap function);
 void vm_write_call(VM_Writer *writer, String_Snap function, uint16 num_args);
 void vm_write_return(VM_Writer *writer);
-void vm_write(VM_Writer *writer,const char *str,...); // should be variadic
+void vm_write(VM_Writer *writer,const char *str,...); 
 void vm_output_to_file(VM_Writer *writer);
 #endif

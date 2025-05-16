@@ -59,7 +59,6 @@ VM_Writer *vm_create_writer()
 
 void vm_free_writer(VM_Writer *writer)
 {
-	//free(writer->file_name);
 	free(writer->output);
 	free(writer);
 }
@@ -159,13 +158,12 @@ void vm_write_goto(VM_Writer *writer,String_Snap label, String_Snap function)
 //works
 void vm_write_if(VM_Writer *writer,String_Snap label, String_Snap function)
 {
-	vm_write(writer,"// if statement\n");
-
-	#define IF_OUTPUT "@SP\n"\
-		"AM=M-1\n"\
-		"D=M\n"\
-		"@%.*s$%.*s\n"\
-		"D;JNE\n"
+#define IF_OUTPUT 	"//if statement\n"\
+			"@SP\n"\
+			"AM=M-1\n"\
+			"D=M\n"\
+			"@%.*s$%.*s\n"\
+			"D;JNE\n"
 
 	vm_write(writer,IF_OUTPUT,function.length,function.data,label.length,label.data);
 
