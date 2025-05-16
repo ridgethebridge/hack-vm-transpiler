@@ -7,10 +7,6 @@
 #define INVALID_INDEX 3
 #define INVALID_SEGMENT 4
 #define OVERFLOW_ERROR 5
-
-
-
-	
 void usage()
 {
 printf("VMtranslator - transpiles hack VM code into hack assembly code\n");
@@ -24,7 +20,6 @@ int shift(int *argc, char ***argv)
 	*argc-=1;
 	*argv+=1;
 }
-
 int main(int argc, char **argv)
 {
 	char *output_name;
@@ -40,8 +35,14 @@ int main(int argc, char **argv)
 	String_Snap cur_function;
 	while(argc > 1) 
 	{
-		shift(&argc,&argv);
+	shift(&argc,&argv);
 	VM_Parser *parser = vm_create_parser(argv[0]);
+	if(!parser)
+	{
+		fprintf(stderr,"could not open file %s\n",argv[0]);
+		free(writer);
+		return 1;
+	}
 	writer->cur_input_file = parser->file_name;
 	// to be used for labels
 

@@ -3,6 +3,7 @@
 #include<stdlib.h>
 #include"arithmetic.h"
 #include"push.h"
+#include"pop.h"
 
 // counter for labels, used for comparison commands
 static uint64 cond_counter = 0;
@@ -91,22 +92,6 @@ void vm_write_arithmetic(VM_Writer *writer,VM_Instruction ins)
 
 void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 {
-	fprintf(writer->output,"// pop\n");
-	#define POP_INIT "@%hu\n"\
-			 "D=A\n"\
-			 "@%s\n"
-
-	#define WRITE_POP  "D=A\n"\
-                           "@%s\n"\
-                           "M=D\n"\
-                           "@SP\n"\
-                           "M=M-1\n"\
-                           "A=M\n"\
-                           "D=M\n"\
-                           "@%s\n"\
-                           "A=M\n"\
-                           "M=D\n"
-
 	char *segment_base = segment_list[segment]; // gets segment string
 
 	switch(segment)
@@ -117,33 +102,26 @@ void vm_write_pop(VM_Writer *writer,VM_Segment segment, uint16 index)
 			exit(1);
 			return;
 		case VM_STATIC:
-			fprintf(writer->output,"@%s.%hu\n" WRITE_POP,writer->cur_input_file,index,XSTR(GEN_1),XSTR(GEN_1));
-			return;
+			fprintf(writer->output,POP_STATIC,writer->cur_input_file,index,XSTR(GEN_1),XSTR(GEN_1));
+			break;
 		case VM_THIS:
 		case VM_THAT:
 		case VM_ARG:
 		case VM_LCL:
-			fprintf(writer->output,POP_INIT "A=M\n",index,segment_base);
-			fprintf(writer->output,"A=D+A\n");
+			fprintf(writer->output,POP_POINTER,index,segment_base,XSTR(GEN_1),XSTR(GEN_1));
 			break;
 		default:
-			fprintf(writer->output,POP_INIT "A=D+A\n",index,segment_base);
+			fprintf(writer->output,POP_REG,index,segment_base,XSTR(GEN_1),XSTR(GEN_1));
 			break;
 	}
-		// all do this routine
-
-	fprintf(writer->output,WRITE_POP,XSTR(GEN_1),XSTR(GEN_1));
-
 }
 
-//works
 void vm_write_label(VM_Writer *writer, String_Snap label, String_Snap function)
 {
 	fprintf(writer->output,"// label\n");
 	fprintf(writer->output,"(%.*s$%.*s)\n",function.length,function.data,label.length,label.data);
 }
 
-// works
 void vm_write_function(VM_Writer *writer, String_Snap function,uint16 num_locals)
 {
 	fprintf(writer->output,"// function definition\n");
@@ -154,7 +132,6 @@ void vm_write_function(VM_Writer *writer, String_Snap function,uint16 num_locals
 	}
 }
 
-//works
 void vm_write_goto(VM_Writer *writer,String_Snap label, String_Snap function)
 {
 	fprintf(writer->output,"// goto\n");
@@ -162,22 +139,17 @@ void vm_write_goto(VM_Writer *writer,String_Snap label, String_Snap function)
 	fprintf(writer->output,"0;JMP\n");
 }
 
-//works
 void vm_write_if(VM_Writer *writer,String_Snap label, String_Snap function)
 {
 	fprintf(writer->output,"// if statement\n");
-
 	#define IF_OUTPUT "@SP\n"\
 		"AM=M-1\n"\
 		"D=M\n"\
 		"@%.*s$%.*s\n"\
 		"D;JNE\n"
-
 	fprintf(writer->output,IF_OUTPUT,function.length,function.data,label.length,label.data);
-
 }
 
-// works
 void vm_write_call(VM_Writer *writer, String_Snap function,uint16 num_args)
 {
 	fprintf(writer->output,"// function call\n");
