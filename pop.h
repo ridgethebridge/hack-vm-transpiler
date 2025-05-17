@@ -5,13 +5,13 @@
 #define POP_STATIC	"//  pop static\n"\
 			"@%s.%hu\n"\
 			 "D=A\n"\
-			 "@%s\n"\
+			 "@13\n"\
 			 "M=D\n"\
 			 "@SP\n"\
 			 "M=M-1\n"\
 			 "A=M\n"\
 			 "D=M\n"\
-			 "@%s\n"\
+			 "@13\n"\
 			 "A=M\n"\
 			 "M=D\n"
 
@@ -22,13 +22,13 @@
 			"A=M\n"\
 			"A=D+A\n"\
 			 "D=A\n"\
-			 "@%s\n"\
+			 "@13\n"\
 			 "M=D\n"\
 			 "@SP\n"\
 			 "M=M-1\n"\
 			 "A=M\n"\
 			 "D=M\n"\
-			 "@%s\n"\
+			 "@13\n"\
 			 "A=M\n"\
 			 "M=D\n"
 
@@ -38,13 +38,13 @@
 			"@%s\n"\
 			"A=D+A\n"\
 			 "D=A\n"\
-			 "@%s\n"\
+			 "@13\n"\
 			 "M=D\n"\
 			 "@SP\n"\
 			 "M=M-1\n"\
 			 "A=M\n"\
 			 "D=M\n"\
-			 "@%s\n"\
+			 "@13\n"\
 			 "A=M\n"\
 			 "M=D\n"
 #endif

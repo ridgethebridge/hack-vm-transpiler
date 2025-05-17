@@ -4,21 +4,6 @@
 #include<stdbool.h>
 #include"libs/string_snap.h"
 
-// TODO remove static base
-#define SP_REG SP
-#define LCL_REG LCL
-#define ARG_REG ARG
-#define THIS_REG THIS
-#define THAT_REG THAT
-#define TEMP_REG 5
-// GEN_1 is used for pop operations
-#define GEN_1 13 
-// GEN_2 stores the return address
-#define GEN_2 14
-// GEN_3 stores the start of stack frame
-#define GEN_3 15
-#define XSTR(X) STR(X)
-#define STR(X) #X
 typedef unsigned long long uint64;
 typedef unsigned short uint16;
 typedef struct VM_Parser {
