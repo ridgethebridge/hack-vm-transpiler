@@ -55,6 +55,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 				{
 					fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
 					fprintf(stderr," excess arguments %.*s passed to binary operator push",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
+					vm_free_parser(parser);
+					vm_free_writer(writer);
 					return OVERFLOW_ERROR;
 				}
 				vm_write_push(writer,segment,index);
@@ -73,6 +75,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 			{
 				fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
 				fprintf(stderr,"arithmetic commands are unary, %.*s \n",parser->line_scanner.snap.length,parser->line_scanner.snap.data);
+				vm_free_parser(parser);
+				vm_free_writer(writer);
 				return ARITHMETIC_ERROR;
 			}
 			vm_write_arithmetic(writer,ins);
@@ -86,6 +90,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 				{
 					fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
 					fprintf(stderr," excess arguments %.*s passed to binary operator pop\n",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
+					vm_free_parser(parser);
+					vm_free_writer(writer);
 					return OVERFLOW_ERROR;
 				}
 				vm_write_pop(writer,segment,index);
@@ -99,6 +105,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 					{
 						fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
 						fprintf(stderr," excess arguments %.*s passed to binary operator function",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
+						vm_free_parser(parser);
+						vm_free_writer(writer);
 						return OVERFLOW_ERROR;
 					}
 					cur_function = function_name;
@@ -113,6 +121,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 					{
 						fprintf(stderr,"error on line %lu : %s\n",parser->line_num,parser->file_name);
 						fprintf(stderr," excess arguments %.*s passed to binary operator call",parser->line_scanner.snap.length-1,parser->line_scanner.snap.data);
+						vm_free_parser(parser);
+						vm_free_writer(writer);
 						return OVERFLOW_ERROR;
 					}
 					vm_write_call(writer,function_name,num_args);
@@ -124,6 +134,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 					if(ss_has_next(parser->line_scanner))
 					{
 						fprintf(stderr,"too much stuff for label!\n");
+						vm_free_parser(parser);
+						vm_free_writer(writer);
 						return 1;
 					}
 					vm_write_label(writer,label_name,cur_function);
@@ -135,6 +147,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 					if(ss_has_next(parser->line_scanner))
 					{
 						fprintf(stderr,"too much stuff for goto!\n");
+						vm_free_parser(parser);
+						vm_free_writer(writer);
 						return 1;
 					}
 					vm_write_goto(writer,label,cur_function);
@@ -145,6 +159,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 					if(ss_has_next(parser->line_scanner))
 					{
 						fprintf(stderr,"too much stuff for if!\n");
+						vm_free_parser(parser);
+						vm_free_writer(writer);
 						return 1;
 					}
 					vm_write_if(writer,label,cur_function);
@@ -154,6 +170,8 @@ int vm_translate(VM_Writer *writer, VM_Parser *parser)
 					if(ss_has_next(parser->line_scanner))
 					{
 						fprintf(stderr,"too much stuff for return!\n");
+						vm_free_parser(parser);
+						vm_free_writer(writer);
 						return 1;
 					}
 					vm_write_return(writer);
@@ -213,6 +231,7 @@ int main(int argc, char **argv)
 				if(!parser)
 				{
 					fprintf(stderr,"could not open file %s for reading\n",buf);
+					vm_free_writer(writer);
 					return 1;
 				}
 			vm_translate(writer,parser);
@@ -231,6 +250,7 @@ int main(int argc, char **argv)
 		if(!parser)
 		{
 			fprintf(stderr,"could not open file %s for reading\n",argv[0]);
+			vm_free_writer(writer);
 			return 1;
 		}
 		vm_translate(writer,parser);
