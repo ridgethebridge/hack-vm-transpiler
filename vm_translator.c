@@ -227,7 +227,7 @@ int main(int argc, char **argv)
 			if(strstr(entry->d_name,".vm"))
 			{
 				snprintf(buf,sizeof(buf),"%s/%s",argv[0],entry->d_name);
-				parser = vm_create_parser(buf);
+				parser = vm_create_parser(entry->d_name);
 				if(!parser)
 				{
 					fprintf(stderr,"could not open file %s for reading\n",buf);
